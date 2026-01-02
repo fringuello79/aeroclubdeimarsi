@@ -38,13 +38,16 @@ header{
     gap:16px;
 }
 .logo{
-    height:56px;
+    height:auto;
+    max-height:48px; /* garantisce che il logo non superi l'altezza header */
+    max-width:140px; /* limita larghezza */
     width:auto;
     border-radius:8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     background: rgba(255,255,255,0.03);
     padding:4px;
     flex-shrink:0;
+    display:block;
 }
 .site-title{
     display:flex;
@@ -115,13 +118,13 @@ footer{max-width:1200px; margin:0 auto 2rem; padding:0 20px; color:var(--muted);
 @media (max-width:900px){
     .header-content{flex-direction:row; gap:10px}
     nav ul{flex-wrap:wrap; justify-content:flex-end}
-    .logo{height:48px}
+    .logo{max-height:44px}
 }
 @media (max-width:600px){
     .header-content{flex-direction:column; align-items:flex-start; gap:8px}
     nav{width:100%}
     nav ul{justify-content:space-between; width:100%}
-    .logo{height:44px}
+    .logo{max-height:40px}
 }
 
 /* small helpers */

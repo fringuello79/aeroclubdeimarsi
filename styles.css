@@ -39,19 +39,24 @@ header {
     align-items: center;
 }
 
+.header-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
 #header-logo {
-    max-width: 35px;
+    max-width: 70px;
     height: auto;
-    margin-bottom: 10px;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 h1 {
     font-size: 2.2rem;
-    margin-bottom: 0.75rem;
+    margin: 0;
     font-weight: 600;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-    text-align: center;
 }
 
 nav {
@@ -315,6 +320,15 @@ footer p {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .header-title-wrapper {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    #header-logo {
+        max-width: 50px;
+    }
+    
     h1 {
         font-size: 1.75rem;
     }

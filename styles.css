@@ -197,6 +197,53 @@ a:hover {
     margin-top: 1.5rem;
 }
 
+/* Aircraft header layout */
+.aircraft-header {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.aircraft-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.aircraft-info h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+.aircraft-info h4 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.aircraft-info p {
+    margin-bottom: 0;
+}
+
+.aircraft-image {
+    flex-shrink: 0;
+    max-width: 250px;
+    width: 100%;
+}
+
+.aircraft-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.aircraft-image img:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 6px 12px rgba(102, 126, 234, 0.4));
+}
+
+
 /* Tabelle */
 table {
     width: 100%;
@@ -353,6 +400,16 @@ footer p {
         padding: 1.5rem;
     }
     
+    .aircraft-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .aircraft-image {
+        max-width: 200px;
+        align-self: center;
+    }
+    
     .gallery {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 1rem;
@@ -389,6 +446,10 @@ footer p {
     .card {
         padding: 1rem;
         margin-bottom: 1rem;
+    }
+    
+    .aircraft-image {
+        max-width: 150px;
     }
     
     table {

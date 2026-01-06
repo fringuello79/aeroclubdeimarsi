@@ -5,6 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galleria - Aeroclub dei Marsi</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .albums-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .album-box {
+            position: relative;
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .album-box:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+
+        .album-slideshow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .album-slideshow img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .album-slideshow img.active {
+            opacity: 0.9;
+        }
+
+        .album-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+            padding: 1.5rem;
+            z-index: 10;
+        }
+
+        .album-title {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .album-count {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .album-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            color: #6c757d;
+            font-size: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .albums-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .album-box {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .albums-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .album-box {
+                height: 220px;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -31,85 +143,183 @@
 
     <div class="container">
         <main>
-<h2>Galleria Fotografica</h2>
+            <h2>Galleria Fotografica</h2>
             
-            <p>Scopri le immagini delle nostre attività, dei nostri velivoli e degli eventi organizzati dall'Aeroclub dei Marsi.</p>
+            <p>Scopri le immagini delle nostre attività, dei nostri velivoli e degli eventi organizzati dall'Aeroclub dei Marsi. Clicca su un album per visualizzare tutte le foto.</p>
 
-            <h3>I Nostri Velivoli</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Tecnam P96 I-6195</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Tecnam P2002 Sierra I-8297</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Velivoli in volo</p>
-                </div>
+            <div id="albums-container" class="albums-grid">
+                <div class="loading-message">Caricamento album in corso...</div>
             </div>
 
-            <h3>Aviosuperficie LIAH</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Vista aerea aviosuperficie</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Pista LIAH</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Clubhouse</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Hangar</p>
-                </div>
-            </div>
-
-            <h3>Attività e Eventi</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Giornata porte aperte</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Fly-in sociale</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Corso di volo</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Briefing pre-volo</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Primo volo solista</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Consegna brevetti</p>
-                </div>
-            </div>
-
-            <h3>Paesaggi</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Vista sui Marsi</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Abruzzo dall'alto</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Tramonto in volo</p>
-                </div>
-            </div>
-
-            <div class="info-box">
-                <p><strong>Nota:</strong> Questa galleria è in fase di allestimento. Le immagini saranno caricate prossimamente. Se hai foto delle attività dell'Aeroclub che vorresti condividere, contattaci!</p>
+            <div class="info-box" style="margin-top: 2rem;">
+                <p><strong>Nota:</strong> Se hai foto delle attività dell'Aeroclub che vorresti condividere, contattaci!</p>
                 <a href="contatti.html" class="btn">Contattaci</a>
             </div>
-
-            <p style="margin-top: 2rem;">Per restare aggiornato sulle nostre attività e vedere altre foto, seguici sui social media. Maggiori informazioni nella sezione <a href="contatti.html">Contatti</a>.</p>
         </main>
     </div>
 
     <footer>
         <p>&copy; 2026 Aeroclub dei Marsi. Tutti i diritti riservati.</p>
     </footer>
+
+    <script>
+        // ========================================
+        // CONFIGURAZIONE DEGLI ALBUM IMGBB
+        // ========================================
+        // 
+        // Per aggiornare questa pagina con gli album reali da imgbb:
+        // 
+        // 1. Visita https://aeroclubdeimarsi.imgbb.com/albums
+        // 2. Per ogni album, copia l'URL diretto dell'album
+        // 3. Per ogni album, ottieni gli URL diretti delle immagini
+        // 4. Aggiorna l'array 'albums' qui sotto con i dati reali
+        // 
+        // Esempio di configurazione con foto reali:
+        // {
+        //     title: "Nome Album",
+        //     url: "https://aeroclubdeimarsi.imgbb.com/album/nome-album",
+        //     photos: [
+        //         "https://i.ibb.co/xxxxx/foto1.jpg",
+        //         "https://i.ibb.co/yyyyy/foto2.jpg",
+        //         "https://i.ibb.co/zzzzz/foto3.jpg"
+        //     ],
+        //     count: 3,
+        //     icon: "✈️"
+        // }
+        // 
+        // Note:
+        // - Le foto vengono mostrate in uno slideshow ciclico con opacità 90%
+        // - Lo slideshow cambia immagine ogni 3 secondi
+        // - Cliccare su un album apre l'album completo su imgbb in una nuova scheda
+        // ========================================
+
+        const albums = [
+            {
+                title: "I Nostri Velivoli",
+                url: "https://aeroclubdeimarsi.imgbb.com/album/velivoli",
+                photos: [],  // Aggiungere qui gli URL delle foto dall'album imgbb
+                count: 3,
+                icon: "✈️"
+            },
+            {
+                title: "Aviosuperficie LIAH",
+                url: "https://aeroclubdeimarsi.imgbb.com/album/aviosuperficie",
+                photos: [],  // Aggiungere qui gli URL delle foto dall'album imgbb
+                count: 4,
+                icon: "🛫"
+            },
+            {
+                title: "Attività e Eventi",
+                url: "https://aeroclubdeimarsi.imgbb.com/album/eventi",
+                photos: [],  // Aggiungere qui gli URL delle foto dall'album imgbb
+                count: 6,
+                icon: "📅"
+            },
+            {
+                title: "Paesaggi",
+                url: "https://aeroclubdeimarsi.imgbb.com/album/paesaggi",
+                photos: [],  // Aggiungere qui gli URL delle foto dall'album imgbb
+                count: 3,
+                icon: "🏔️"
+            }
+        ];
+
+        // Funzione per creare un album box
+        function createAlbumBox(album) {
+            const box = document.createElement('div');
+            box.className = 'album-box';
+            box.onclick = () => window.open(album.url, '_blank');
+
+            // Crea slideshow
+            const slideshow = document.createElement('div');
+            slideshow.className = 'album-slideshow';
+
+            // Filtra le foto valide e aggiungi gestione errori
+            const validPhotos = album.photos && album.photos.length > 0 
+                ? album.photos.filter(photo => photo && photo.trim() !== '') 
+                : [];
+
+            if (validPhotos.length > 0) {
+                validPhotos.forEach((photo, index) => {
+                    const img = document.createElement('img');
+                    img.src = photo;
+                    img.alt = album.title;
+                    if (index === 0) img.classList.add('active');
+                    
+                    // Gestione errore caricamento immagine
+                    img.onerror = function() {
+                        // Se l'immagine non si carica, mostra il placeholder
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'album-placeholder';
+                        placeholder.textContent = album.icon;
+                        if (this.classList.contains('active')) {
+                            placeholder.classList.add('active');
+                        }
+                        this.parentNode.replaceChild(placeholder, this);
+                    };
+                    
+                    slideshow.appendChild(img);
+                });
+            } else {
+                // Placeholder se non ci sono foto
+                const placeholder = document.createElement('div');
+                placeholder.className = 'album-placeholder';
+                placeholder.style.opacity = '0.9';
+                placeholder.textContent = album.icon;
+                slideshow.appendChild(placeholder);
+            }
+
+            // Crea overlay con titolo
+            const overlay = document.createElement('div');
+            overlay.className = 'album-overlay';
+            
+            const title = document.createElement('h3');
+            title.className = 'album-title';
+            title.textContent = album.title;
+            
+            const count = document.createElement('p');
+            count.className = 'album-count';
+            count.textContent = `${album.count} ${album.count === 1 ? 'foto' : 'foto'}`;
+            
+            overlay.appendChild(title);
+            overlay.appendChild(count);
+
+            box.appendChild(slideshow);
+            box.appendChild(overlay);
+
+            return box;
+        }
+
+        // Funzione per avviare lo slideshow
+        function startSlideshow(slideshowElement) {
+            const images = slideshowElement.querySelectorAll('img');
+            if (images.length <= 1) return;
+
+            let currentIndex = 0;
+            setInterval(() => {
+                images[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % images.length;
+                images[currentIndex].classList.add('active');
+            }, 3000); // Cambia immagine ogni 3 secondi
+        }
+
+        // Inizializza la galleria
+        function initGallery() {
+            const container = document.getElementById('albums-container');
+            container.innerHTML = '';
+
+            albums.forEach(album => {
+                const albumBox = createAlbumBox(album);
+                container.appendChild(albumBox);
+                
+                // Avvia slideshow per questo album
+                const slideshow = albumBox.querySelector('.album-slideshow');
+                startSlideshow(slideshow);
+            });
+        }
+
+        // Carica la galleria quando la pagina è pronta
+        document.addEventListener('DOMContentLoaded', initGallery);
+    </script>
 </body>
 </html>

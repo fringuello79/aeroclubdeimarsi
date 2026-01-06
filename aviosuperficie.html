@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="parallax-bg" id="parallax-bg"></div>
+    
     <header>
         <div class="header-content">
             <div class="header-title-wrapper">
@@ -29,8 +31,10 @@
         </div>
     </header>
 
-    <div class="container">
-        <main>
+    <div class="parallax-container">
+        <div class="parallax-content">
+            <div class="container">
+                <main>
             <h2>Aviosuperficie LIAH</h2>
             
             <p>L'Aeroclub dei Marsi opera presso l'aviosuperficie LIAH (Aeroclub dei Marsi), una struttura moderna situata nel Comune di Celano (AQ), in Abruzzo.</p>
@@ -89,10 +93,23 @@
                 <p><strong>Nota per i piloti:</strong> Prima di pianificare un volo verso LIAH, si consiglia di contattare l'Aeroclub per verificare l'operatività e le condizioni della pista.</p>
             </div>
         </main>
+            </div>
+        </div>
     </div>
 
     <footer>
         <p>&copy; 2026 Aeroclub dei Marsi. Tutti i diritti riservati.</p>
     </footer>
+    
+    <script>
+        // Parallax scrolling effect
+        window.addEventListener('scroll', function() {
+            const parallaxBg = document.getElementById('parallax-bg');
+            const scrollPosition = window.pageYOffset;
+            
+            // Move background much slower than scroll (0.25 = 25% of scroll speed)
+            parallaxBg.style.transform = 'translateY(' + (scrollPosition * 0.25) + 'px)';
+        });
+    </script>
 </body>
 </html>

@@ -107,8 +107,8 @@
             const parallaxBg = document.getElementById('parallax-bg');
             const scrollPosition = window.pageYOffset;
             
-            // Move background slower than scroll (0.5 = 50% of scroll speed)
-            parallaxBg.style.transform = 'translateY(' + (scrollPosition * 0.5) + 'px)';
+            // Move background much slower than scroll (0.25 = 25% of scroll speed)
+            parallaxBg.style.transform = 'translateY(' + (scrollPosition * 0.25) + 'px)';
         });
     </script>
 </body>

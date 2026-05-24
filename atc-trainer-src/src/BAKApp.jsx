@@ -39,12 +39,6 @@ const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 1000, h: 700 };
 // Logo Aeroclub dei Marsi (file in public/logo.jpg, servito via base path)
 const LOGO_URL = import.meta.env.BASE_URL + "logo.jpg";
 
-// Rileva dispositivo touch (no hover + puntatore "coarse" = iPhone/Android/iPad)
-const detectTouchDevice = () => {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
-};
-
 export default function App() {
   const {
     uid, aircraft, airport,
@@ -59,9 +53,7 @@ export default function App() {
   const [rotateDrag, setRotateDrag] = useState(null);
   const [panDrag, setPanDrag] = useState(null);
   const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
-  const [touchMode, setTouchMode] = useState(detectTouchDevice());
   const svgRef = useRef(null);
-  const tapStartRef = useRef(null);
 
   const apData = AIRPORTS[airport] || AIRPORTS.LIBP;
 
@@ -152,7 +144,6 @@ export default function App() {
     e.stopPropagation();
     setSelectedId(ac.id);
     if (!canControl(ac)) return;
-    if (touchMode) return; // In modalità touch nessun drag: solo seleziona
     e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = toSvg(e.clientX, e.clientY);
     setDrag({ id: ac.id, offsetX: ac.x - x, offsetY: ac.y - y });
@@ -160,18 +151,13 @@ export default function App() {
 
   const onRotateDown = (e, ac) => {
     e.stopPropagation();
-    if (!canControl(ac) || touchMode) return;
+    if (!canControl(ac)) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setRotateDrag({ id: ac.id });
   };
 
   const onMapDown = (e) => {
     if (drag || rotateDrag) return;
-    if (touchMode) {
-      // Salva inizio per riconoscere il tap (vs trascinamento accidentale)
-      tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
-      return;
-    }
     setPanDrag({ startClientX: e.clientX, startClientY: e.clientY, startVB: { ...viewBox } });
   };
 
@@ -199,26 +185,6 @@ export default function App() {
   };
 
   const onUp = () => { setDrag(null); setRotateDrag(null); setPanDrag(null); };
-
-  // Modalità touch: se è stato un tap (no drag significativo, breve tempo) sulla mappa vuota
-  // e ho un mio aereo selezionato, lo sposto qui
-  const onMapUp = (e) => {
-    if (touchMode && tapStartRef.current) {
-      const { x: sx, y: sy, t: st } = tapStartRef.current;
-      const dx = e.clientX - sx;
-      const dy = e.clientY - sy;
-      const dt = Date.now() - st;
-      tapStartRef.current = null;
-      if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 700) {
-        const sel = aircraft.find(a => a.id === selectedId);
-        if (sel && canControl(sel)) {
-          const { x, y } = toSvg(e.clientX, e.clientY);
-          patchAircraft(selectedId, { x: clamp(x, 20, 980), y: clamp(y, 20, 680) });
-        }
-      }
-    }
-    onUp();
-  };
 
   const updateSelected = (patch) => {
     if (!selected || !canControl(selected)) return;
@@ -368,8 +334,6 @@ export default function App() {
 
           <ModeToggle isInstructor={isInstructor} setIsInstructor={setIsInstructor} />
 
-          <InputModeToggle touchMode={touchMode} setTouchMode={setTouchMode} />
-
           {isInstructor && (
             <>
               <button onClick={addAircraft} className="mono" style={{ fontSize: 12, fontWeight: 700, padding: "8px 12px", borderRadius: 4, background: "rgba(251,191,36,0.15)", border: "1px solid #f59e0b", color: "#fbbf24", cursor: "pointer" }}>+ AIRCRAFT</button>
@@ -387,24 +351,6 @@ export default function App() {
             {apData.id} · {aircraft.length} TFC · {apData.coords}
           </div>
 
-          {touchMode && (
-            <div className="mono" style={{
-              position: "absolute",
-              top: 10, left: "50%", transform: "translateX(-50%)",
-              fontSize: 11, padding: "6px 11px", borderRadius: 4,
-              background: "rgba(251,191,36,0.18)",
-              color: "#fbbf24",
-              border: "1px solid #f59e0b",
-              zIndex: 10, fontWeight: 700, letterSpacing: 0.5,
-              maxWidth: "60%", textAlign: "center", whiteSpace: "nowrap",
-              overflow: "hidden", textOverflow: "ellipsis",
-            }}>
-              {selectedId && aircraft.find(a => a.id === selectedId && (isInstructor || a.ownerId === me.userId))
-                ? "👆 Tocca dove vuoi spostare l'aereo"
-                : "👆 Tocca un aereo per selezionarlo"}
-            </div>
-          )}
-
           <div style={{ position: "absolute", top: 10, right: 10, display: "flex", flexDirection: "column", gap: 4, zIndex: 10 }}>
             <button className="zoom-btn" onClick={zoomIn} title="Zoom +">+</button>
             <button className="zoom-btn" onClick={zoomOut} title="Zoom −">−</button>
@@ -418,8 +364,8 @@ export default function App() {
             style={{ width: "100%", height: "100%", display: "block", userSelect: "none", touchAction: "none", cursor: panDrag ? "grabbing" : "default" }}
             onPointerDown={onMapDown}
             onPointerMove={onMove}
-            onPointerUp={onMapUp}
-            onPointerLeave={onMapUp}
+            onPointerUp={onUp}
+            onPointerLeave={onUp}
           >
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0e2236" strokeWidth="0.5" /></pattern>
@@ -437,7 +383,6 @@ export default function App() {
                 selected={ac.id === selectedId}
                 isMine={ac.ownerId === me.userId}
                 controllable={canControl(ac)}
-                touchMode={touchMode}
                 onPointerDown={(e) => onPlaneDown(e, ac)}
                 onRotateDown={(e) => onRotateDown(e, ac)}
               />
@@ -452,12 +397,8 @@ export default function App() {
         <aside className="sidebar">
           <PresentiPanel people={people} myUid={me.userId} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} />
 
-          {isInstructor && aircraft.length > 0 && (
-            <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} />
-          )}
-
           {selected ? (
-            <Console ac={selected} update={updateSelected} isInstructor={isInstructor} canEdit={canControl(selected)} freqs={apData.freqs} touchMode={touchMode} />
+            <Console ac={selected} update={updateSelected} isInstructor={isInstructor} canEdit={canControl(selected)} freqs={apData.freqs} />
           ) : (
             <PanelBox title="Consolle">
               <div className="mono" style={{ fontSize: 12, padding: 24, textAlign: "center", color: "#94a3b8" }}>Seleziona un aereo dalla mappa o dalla lista.</div>
@@ -541,71 +482,6 @@ function ModeToggle({ isInstructor, setIsInstructor }) {
   );
 }
 
-function InputModeToggle({ touchMode, setTouchMode }) {
-  return (
-    <div className="mono" title="Modalità di input: mouse (drag) o touch (tap per spostare)" style={{ display: "flex", borderRadius: 4, overflow: "hidden", fontSize: 11, border: "1px solid #2d5980" }}>
-      <button onClick={() => setTouchMode(false)} style={{ padding: "8px 10px", fontWeight: 700, letterSpacing: 1, background: !touchMode ? "#1e3a5f" : "transparent", color: !touchMode ? "#7dd3fc" : "#64748b", border: "none", cursor: "pointer" }}>🖱 MOUSE</button>
-      <button onClick={() => setTouchMode(true)} style={{ padding: "8px 10px", fontWeight: 700, letterSpacing: 1, background: touchMode ? "#1e3a5f" : "transparent", color: touchMode ? "#7dd3fc" : "#64748b", border: "none", cursor: "pointer" }}>👆 TOUCH</button>
-    </div>
-  );
-}
-
-function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
-  // Ordinamento: emergenze prima, poi in volo, poi a terra, poi parcheggiati
-  const STATUS_RANK = { AIRBORNE: 0, FINAL: 1, DEPART: 2, LINEUP: 3, HOLDING: 4, TAXI: 5, STARTUP: 6, PARKED: 7 };
-  const sorted = [...aircraft].sort((a, b) => {
-    const ea = ["7500","7600","7700"].includes(a.squawk) ? 0 : 1;
-    const eb = ["7500","7600","7700"].includes(b.squawk) ? 0 : 1;
-    if (ea !== eb) return ea - eb;
-    return (STATUS_RANK[a.status] ?? 99) - (STATUS_RANK[b.status] ?? 99);
-  });
-
-  return (
-    <PanelBox title={`Strip Board (${aircraft.length})`} accent="#fca5a5">
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "70px 42px 50px 60px 1fr",
-        gap: 4, padding: "3px 6px 5px",
-        fontSize: 9, color: "#94a3b8", letterSpacing: 1, fontWeight: 700,
-      }} className="mono">
-        <span>MARCHE</span><span>SQK</span><span>QUOTA</span><span>FREQ</span><span>STATO</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {sorted.map(ac => {
-          const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
-          const isSelected = ac.id === selectedId;
-          const status = STATUSES.find(s => s.value === ac.status) || STATUSES[0];
-          return (
-            <div
-              key={ac.id}
-              onClick={() => onSelect(ac.id)}
-              className="mono"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "70px 42px 50px 60px 1fr",
-                gap: 4, alignItems: "center",
-                padding: "6px 6px",
-                fontSize: 11,
-                borderRadius: 3, cursor: "pointer",
-                background: isEmergency
-                  ? "rgba(239,68,68,0.12)"
-                  : isSelected ? "rgba(255,255,255,0.06)" : "rgba(7,18,30,0.5)",
-                border: `1px solid ${isSelected ? ac.color : isEmergency ? "#ef4444" : "#2d5980"}`,
-              }}
-            >
-              <span style={{ color: ac.color, fontWeight: 700, letterSpacing: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ac.callsign}</span>
-              <span style={{ color: isEmergency ? "#fca5a5" : "#7dd3fc", fontWeight: 700 }}>{ac.squawk}</span>
-              <span style={{ color: "#fbbf24" }}>{ac.altitude}ft</span>
-              <span style={{ color: "#a3e635", fontSize: 10 }}>{ac.freq}</span>
-              <span style={{ color: status.color, fontSize: 10, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{status.label}{isEmergency && " 🚨"}</span>
-            </div>
-          );
-        })}
-      </div>
-    </PanelBox>
-  );
-}
-
 function PresentiPanel({ people, myUid, selectedId, onSelect }) {
   return (
     <PanelBox title={`Presenti (${people.length})`}>
@@ -646,72 +522,51 @@ function PresentiPanel({ people, myUid, selectedId, onSelect }) {
   );
 }
 
-function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPointerDown, onRotateDown }) {
+function AircraftMarker({ ac, selected, isMine, controllable, onPointerDown, onRotateDown }) {
   const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
   const status = STATUSES.find((s) => s.value === ac.status) || STATUSES[0];
   const handleR = 26;
-  // In touch mode l'area di tap è molto più grande per evitare miss
-  const HIT_R = touchMode ? 40 : 30;
 
   return (
     <g transform={`translate(${ac.x} ${ac.y})`}>
-      {/* Pulse emergenza */}
-      {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
+      {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite" }} />}
 
-      {/* Tutto il visivo è dentro un gruppo che NON intercetta puntatori — gli eventi cadono attraverso al rect hit area sotto/sopra */}
-      <g style={{ pointerEvents: "none" }}>
-        {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.85" />}
-        {selected && !controllable && <circle r={handleR} fill="none" stroke="#fca5a5" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.7" />}
+      {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.85" />}
+      {selected && !controllable && <circle r={handleR} fill="none" stroke="#fca5a5" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.7" />}
 
+      <g onPointerDown={onPointerDown} style={{ cursor: controllable ? "grab" : "pointer", touchAction: "none" }}>
         <g transform={`rotate(${ac.heading})`}>
           <path d="M 0 -13 L 2 -8 L 2 0 L 13 5 L 13 7 L 2 5 L 2 9 L 6 13 L 6 14 L 0 13 L -6 14 L -6 13 L -2 9 L -2 5 L -13 7 L -13 5 L -2 0 L -2 -8 Z" fill={ac.color} stroke="#0b1b2b" strokeWidth="1" strokeLinejoin="round" opacity={controllable ? 1 : 0.8} />
         </g>
-
-        {/* Badge TU */}
-        {isMine && (
-          <g transform="translate(-16 -16)">
-            <circle r="7" fill="#fbbf24" stroke="#0b1b2b" strokeWidth="1.2" />
-            <text textAnchor="middle" y="3" className="mono" style={{ fill: "#0b1b2b", fontSize: 8, fontWeight: 900 }}>TU</text>
-          </g>
-        )}
-
-        {/* Etichetta sotto */}
-        <g transform="translate(0 32)">
-          <rect x="-36" y="-10" width="72" height="26" rx="3" fill="rgba(3,10,20,0.92)" stroke={selected ? ac.color : "#2d5980"} strokeWidth="1.2" />
-          <text x="0" y="2" textAnchor="middle" className="mono" style={{ fill: ac.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{ac.callsign}</text>
-          <text x="0" y="12" textAnchor="middle" className="mono" style={{ fill: status.color, fontSize: 8, fontWeight: 600 }}>
-            {ac.altitude > 0 ? `${ac.altitude}ft · ${status.label}` : status.label}
-          </text>
-        </g>
       </g>
 
-      {/* Hit area: copre aereo + etichetta. È l'unico nodo che riceve eventi. Posto in coda per essere sopra (z-order) tutto il gruppo visivo. */}
-      <rect
-        x={-HIT_R} y={-HIT_R}
-        width={HIT_R * 2} height={HIT_R * 2 + 28}
-        fill="transparent"
-        onPointerDown={onPointerDown}
-        style={{ cursor: controllable ? (touchMode ? "pointer" : "grab") : "pointer", touchAction: "none" }}
-      />
-
-      {/* Maniglia di rotazione: solo in mouse mode + aereo selezionato e controllabile */}
-      {!touchMode && selected && controllable && (
-        <g transform={`rotate(${ac.heading})`}>
-          <line x1="0" y1="0" x2="0" y2={-handleR} stroke={ac.color} strokeWidth="1" opacity="0.4" style={{ pointerEvents: "none" }} />
-          <circle
-            cx="0" cy={-handleR} r="7"
-            fill={ac.color} stroke="#0b1b2b" strokeWidth="1.5"
-            onPointerDown={onRotateDown}
-            style={{ cursor: "alias", touchAction: "none" }}
-          />
-          <circle cx="0" cy={-handleR} r="2" fill="#0b1b2b" style={{ pointerEvents: "none" }} />
+      {selected && controllable && (
+        <g onPointerDown={onRotateDown} style={{ cursor: "alias", touchAction: "none" }} transform={`rotate(${ac.heading})`}>
+          <line x1="0" y1="0" x2="0" y2={-handleR} stroke={ac.color} strokeWidth="1" opacity="0.4" />
+          <circle cx="0" cy={-handleR} r="6" fill={ac.color} stroke="#0b1b2b" strokeWidth="1.5" />
+          <circle cx="0" cy={-handleR} r="2" fill="#0b1b2b" />
         </g>
       )}
+
+      {isMine && (
+        <g transform="translate(-16 -16)">
+          <circle r="7" fill="#fbbf24" stroke="#0b1b2b" strokeWidth="1.2" />
+          <text textAnchor="middle" y="3" className="mono" style={{ fill: "#0b1b2b", fontSize: 8, fontWeight: 900 }}>TU</text>
+        </g>
+      )}
+
+      <g transform="translate(0 32)">
+        <rect x="-36" y="-10" width="72" height="26" rx="3" fill="rgba(3,10,20,0.92)" stroke={selected ? ac.color : "#2d5980"} strokeWidth="1.2" />
+        <text x="0" y="2" textAnchor="middle" className="mono" style={{ fill: ac.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{ac.callsign}</text>
+        <text x="0" y="12" textAnchor="middle" className="mono" style={{ fill: status.color, fontSize: 8, fontWeight: 600 }}>
+          {ac.altitude > 0 ? `${ac.altitude}ft · ${status.label}` : status.label}
+        </text>
+      </g>
     </g>
   );
 }
 
-function Console({ ac, update, isInstructor, canEdit, freqs, touchMode }) {
+function Console({ ac, update, isInstructor, canEdit, freqs }) {
   const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
   const special = SPECIAL_SQUAWKS[ac.squawk];
   const disabled = !canEdit;
@@ -724,7 +579,7 @@ function Console({ ac, update, isInstructor, canEdit, freqs, touchMode }) {
         <Field label="Stato">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             {STATUSES.map((s) => (
-              <button key={s.value} onClick={() => update({ status: s.value })} disabled={disabled} className="mono" style={{ fontSize: 11, padding: touchMode ? "9px 8px" : "6px 8px", borderRadius: 4, textAlign: "left", background: ac.status === s.value ? "rgba(7,18,30,0.95)" : "rgba(7,18,30,0.5)", border: `1px solid ${ac.status === s.value ? s.color : "#2d5980"}`, color: ac.status === s.value ? s.color : "#cbd5e1", fontWeight: ac.status === s.value ? 700 : 500, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1 }}>{s.label}</button>
+              <button key={s.value} onClick={() => update({ status: s.value })} disabled={disabled} className="mono" style={{ fontSize: 11, padding: "6px 8px", borderRadius: 4, textAlign: "left", background: ac.status === s.value ? "rgba(7,18,30,0.95)" : "rgba(7,18,30,0.5)", border: `1px solid ${ac.status === s.value ? s.color : "#2d5980"}`, color: ac.status === s.value ? s.color : "#cbd5e1", fontWeight: ac.status === s.value ? 700 : 500, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1 }}>{s.label}</button>
             ))}
           </div>
         </Field>
@@ -742,7 +597,7 @@ function Console({ ac, update, isInstructor, canEdit, freqs, touchMode }) {
           {!disabled && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
               {freqs.map((f) => (
-                <button key={f.value} onClick={() => update({ freq: f.value })} className="mono" style={{ fontSize: 10, padding: touchMode ? "6px 9px" : "3px 7px", borderRadius: 2, background: ac.freq === f.value ? "rgba(163,230,53,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${ac.freq === f.value ? "#65a30d" : "#2d5980"}`, color: ac.freq === f.value ? "#a3e635" : "#cbd5e1", cursor: "pointer", fontWeight: 600 }}>{f.label}</button>
+                <button key={f.value} onClick={() => update({ freq: f.value })} className="mono" style={{ fontSize: 10, padding: "3px 7px", borderRadius: 2, background: ac.freq === f.value ? "rgba(163,230,53,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${ac.freq === f.value ? "#65a30d" : "#2d5980"}`, color: ac.freq === f.value ? "#a3e635" : "#cbd5e1", cursor: "pointer", fontWeight: 600 }}>{f.label}</button>
               ))}
             </div>
           )}
@@ -751,26 +606,17 @@ function Console({ ac, update, isInstructor, canEdit, freqs, touchMode }) {
         <Field label="Quota (ft)">
           <div style={{ display: "flex", gap: 4 }}>
             <input type="number" value={ac.altitude} onChange={(e) => update({ altitude: Math.max(0, parseInt(e.target.value) || 0) })} disabled={disabled} step="500" className="mono" style={{ flex: 1, padding: "8px 10px", borderRadius: 4, background: "#02060c", border: "1px solid #2d5980", color: "#fbbf24", fontWeight: 700, fontSize: 15, letterSpacing: 1, textAlign: "center", opacity: disabled ? 0.5 : 1, minWidth: 0 }} />
-            <button onClick={() => update({ altitude: ac.altitude + 500 })} disabled={disabled} className="mono" style={{ padding: touchMode ? "10px 14px" : "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 11, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>+500</button>
-            <button onClick={() => update({ altitude: Math.max(0, ac.altitude - 500) })} disabled={disabled} className="mono" style={{ padding: touchMode ? "10px 14px" : "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 11, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>−500</button>
+            <button onClick={() => update({ altitude: ac.altitude + 500 })} disabled={disabled} className="mono" style={{ padding: "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 11, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>+500</button>
+            <button onClick={() => update({ altitude: Math.max(0, ac.altitude - 500) })} disabled={disabled} className="mono" style={{ padding: "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 11, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>−500</button>
           </div>
         </Field>
 
-        <Field label={touchMode ? "Prua (°)" : "Prua (°) — o trascina la maniglia sull'aereo"}>
+        <Field label="Prua (°) — o trascina la maniglia sull'aereo">
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <input type="number" value={ac.heading} onChange={(e) => { let v = parseInt(e.target.value) || 0; v = ((v % 360) + 360) % 360; update({ heading: v }); }} disabled={disabled} min="0" max="359" className="mono" style={{ flex: 1, padding: "8px 10px", borderRadius: 4, background: "#02060c", border: "1px solid #2d5980", color: "#c4b5fd", fontWeight: 700, fontSize: 15, letterSpacing: 1, textAlign: "center", opacity: disabled ? 0.5 : 1, minWidth: 0 }} />
-            <button onClick={() => update({ heading: (ac.heading + 10) % 360 })} disabled={disabled} className="mono" style={{ padding: touchMode ? "10px 14px" : "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 13, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>+10°</button>
-            <button onClick={() => update({ heading: ((ac.heading - 10) % 360 + 360) % 360 })} disabled={disabled} className="mono" style={{ padding: touchMode ? "10px 14px" : "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 13, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>−10°</button>
+            <button onClick={() => update({ heading: (ac.heading + 10) % 360 })} disabled={disabled} className="mono" style={{ padding: "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 13, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>↻</button>
+            <button onClick={() => update({ heading: ((ac.heading - 10) % 360 + 360) % 360 })} disabled={disabled} className="mono" style={{ padding: "0 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980", color: "#cbd5e1", fontSize: 13, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}>↺</button>
           </div>
-          {touchMode && !disabled && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3, marginTop: 6 }}>
-              {[
-                { lbl: "N", deg: 0 }, { lbl: "E", deg: 90 }, { lbl: "S", deg: 180 }, { lbl: "W", deg: 270 },
-              ].map((d) => (
-                <button key={d.lbl} onClick={() => update({ heading: d.deg })} className="mono" style={{ padding: "8px 4px", borderRadius: 3, background: ac.heading === d.deg ? "rgba(196,181,253,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${ac.heading === d.deg ? "#a78bfa" : "#2d5980"}`, color: ac.heading === d.deg ? "#c4b5fd" : "#cbd5e1", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>{d.lbl}<span style={{ fontSize: 9, color: "#94a3b8", marginLeft: 3 }}>{d.deg.toString().padStart(3, "0")}</span></button>
-              ))}
-            </div>
-          )}
         </Field>
       </div>
     </PanelBox>

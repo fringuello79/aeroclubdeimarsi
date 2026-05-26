@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "./useSession";
-import { AIRPORTS, AIRPORT_OPTIONS } from "./airports";
+import {
+  AIRPORTS, AIRPORT_OPTIONS, WORLD, WORLD_FOCUS,
+  REPORTING_POINTS, COMMON_FREQS, GeographicBackground, WindIndicator,
+} from "./airports";
+
+// Versione applicazione
+const APP_VERSION = "v1.4 · 26/05/2026";
 
 const STATUSES = [
-  { value: "PARKED",   label: "Parked",        color: "#94a3b8" },
-  { value: "STARTUP",  label: "Startup",       color: "#a3e635" },
-  { value: "TAXI",     label: "Taxi",          color: "#facc15" },
-  { value: "HOLDING",  label: "Holding Point", color: "#fb923c" },
-  { value: "LINEUP",   label: "Line-up",       color: "#f97316" },
-  { value: "DEPART",   label: "Departing",     color: "#22d3ee" },
-  { value: "AIRBORNE", label: "Airborne",      color: "#34d399" },
-  { value: "FINAL",    label: "Final",         color: "#a78bfa" },
+  { value: "PARKED",   label: "Parked",        abbr: "PK", color: "#94a3b8" },
+  { value: "STARTUP",  label: "Startup",       abbr: "ST", color: "#a3e635" },
+  { value: "TAXI",     label: "Taxi",          abbr: "TX", color: "#facc15" },
+  { value: "HOLDING",  label: "Holding Point", abbr: "HP", color: "#fb923c" },
+  { value: "LINEUP",   label: "Line-up",       abbr: "LU", color: "#f97316" },
+  { value: "DEPART",   label: "Departing",     abbr: "DP", color: "#22d3ee" },
+  { value: "AIRBORNE", label: "Airborne",      abbr: "AB", color: "#34d399" },
+  { value: "FINAL",    label: "Final",         abbr: "FN", color: "#a78bfa" },
 ];
 
 const SPECIAL_SQUAWKS = {
@@ -34,7 +40,8 @@ const typeFromCallsign = (cs) => {
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-const DEFAULT_VIEWBOX = { x: 0, y: 0, w: 1000, h: 700 };
+// Vista predefinita: tutta l'Abruzzo
+const DEFAULT_VIEWBOX = { x: WORLD_FOCUS.x, y: WORLD_FOCUS.y, w: WORLD_FOCUS.w, h: WORLD_FOCUS.h };
 
 // Logo Aeroclub dei Marsi (file in public/logo.jpg, servito via base path)
 const LOGO_URL = import.meta.env.BASE_URL + "logo.jpg";
@@ -47,9 +54,9 @@ const detectTouchDevice = () => {
 
 export default function App() {
   const {
-    uid, aircraft, airport,
+    uid, aircraft, airport, wind,
     upsertAircraft, patchAircraft, deleteAircraft, setupDisconnect,
-    setAirport, resetAllTraffic,
+    setAirport, resetAllTraffic, setWind,
   } = useSession();
 
   const [me, setMe] = useState(null);
@@ -63,7 +70,10 @@ export default function App() {
   const svgRef = useRef(null);
   const tapStartRef = useRef(null);
 
-  const apData = AIRPORTS[airport] || AIRPORTS.LIBP;
+  const apData = AIRPORTS[airport] || null;
+  const viewLabel = apData
+    ? `${apData.id} ${apData.shortName}`
+    : "ABRUZZO · VISTA D'INSIEME";
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -73,7 +83,15 @@ export default function App() {
     return () => { if (document.head.contains(link)) document.head.removeChild(link); };
   }, []);
 
-  useEffect(() => { setViewBox(DEFAULT_VIEWBOX); }, [airport]);
+  // Reset viewBox quando cambia la vista (WORLD/LIBP/LIAH)
+  useEffect(() => {
+    if (airport === "WORLD") {
+      setViewBox({ x: WORLD_FOCUS.x, y: WORLD_FOCUS.y, w: WORLD_FOCUS.w, h: WORLD_FOCUS.h });
+    } else if (AIRPORTS[airport]) {
+      const fb = AIRPORTS[airport].focusBox;
+      setViewBox({ x: fb.x, y: fb.y, w: fb.w, h: fb.h });
+    }
+  }, [airport]);
 
   const toSvg = useCallback((cx, cy) => {
     const svg = svgRef.current; if (!svg) return { x: 0, y: 0 };
@@ -90,7 +108,7 @@ export default function App() {
       const point = toSvg(e.clientX, e.clientY);
       const factor = e.deltaY > 0 ? 1.15 : 0.87;
       setViewBox((vb) => {
-        const newW = clamp(vb.w * factor, 200, 2500);
+        const newW = clamp(vb.w * factor, 200, WORLD.w * 1.2);
         const newH = newW * (vb.h / vb.w);
         const newX = point.x - (point.x - vb.x) * (newW / vb.w);
         const newY = point.y - (point.y - vb.y) * (newH / vb.h);
@@ -101,30 +119,115 @@ export default function App() {
     return () => svg.removeEventListener("wheel", handler);
   }, [toSvg, me]);
 
-  const zoomIn = () => setViewBox((vb) => ({ x: vb.x + vb.w*0.1, y: vb.y + vb.h*0.1, w: clamp(vb.w*0.8, 200, 2500), h: clamp(vb.h*0.8, 140, 1750) }));
-  const zoomOut = () => setViewBox((vb) => ({ x: vb.x - vb.w*0.125, y: vb.y - vb.h*0.125, w: clamp(vb.w*1.25, 200, 2500), h: clamp(vb.h*1.25, 140, 1750) }));
+  // PINCH-TO-ZOOM (touch). Quando ci sono 2 dita: scala la viewBox attorno al midpoint.
+  // Quando torna a una o zero dita: rilascia il gesto.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    let pinchState = null; // { startDist, startMid, startVB }
+
+    const dist = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const mid  = (t1, t2) => ({ x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 });
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const midClient = mid(t1, t2);
+        // Converto il midpoint in coordinate SVG usando la viewBox corrente
+        const rect = svg.getBoundingClientRect();
+        // Leggo la viewBox attuale dall'attributo per essere certo del valore di partenza
+        const vbAttr = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+        const vbNow = { x: vbAttr[0], y: vbAttr[1], w: vbAttr[2], h: vbAttr[3] };
+        const svgMid = {
+          x: vbNow.x + ((midClient.x - rect.left) / rect.width) * vbNow.w,
+          y: vbNow.y + ((midClient.y - rect.top)  / rect.height) * vbNow.h,
+        };
+        pinchState = {
+          startDist: dist(t1, t2),
+          startVB: vbNow,
+          svgMid,
+        };
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchState) {
+        e.preventDefault();
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const newDist = dist(t1, t2);
+        const scale = pinchState.startDist / newDist; // >1 = zoom out, <1 = zoom in
+        const newW = clamp(pinchState.startVB.w * scale, 200, WORLD.w * 1.2);
+        const ratio = pinchState.startVB.h / pinchState.startVB.w;
+        const newH = newW * ratio;
+        // Mantengo il midpoint del gesto fisso in coordinate SVG
+        const newX = pinchState.svgMid.x - (pinchState.svgMid.x - pinchState.startVB.x) * (newW / pinchState.startVB.w);
+        const newY = pinchState.svgMid.y - (pinchState.svgMid.y - pinchState.startVB.y) * (newH / pinchState.startVB.h);
+        setViewBox({ x: newX, y: newY, w: newW, h: newH });
+      } else if (e.touches.length < 2) {
+        pinchState = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      pinchState = null;
+    };
+
+    svg.addEventListener("touchstart", onTouchStart, { passive: false });
+    svg.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    svg.addEventListener("touchend",   onTouchEnd);
+    svg.addEventListener("touchcancel",onTouchEnd);
+    return () => {
+      svg.removeEventListener("touchstart", onTouchStart);
+      svg.removeEventListener("touchmove",  onTouchMove);
+      svg.removeEventListener("touchend",   onTouchEnd);
+      svg.removeEventListener("touchcancel",onTouchEnd);
+    };
+  }, []);
+
+  const zoomIn = () => setViewBox((vb) => ({ x: vb.x + vb.w*0.1, y: vb.y + vb.h*0.1, w: clamp(vb.w*0.8, 200, WORLD.w * 1.2), h: clamp(vb.h*0.8, 140, WORLD.h * 1.2) }));
+  const zoomOut = () => setViewBox((vb) => ({ x: vb.x - vb.w*0.125, y: vb.y - vb.h*0.125, w: clamp(vb.w*1.25, 200, WORLD.w * 1.2), h: clamp(vb.h*1.25, 140, WORLD.h * 1.2) }));
   const zoomReset = () => setViewBox(DEFAULT_VIEWBOX);
 
   const findFreeStand = (apId) => {
     const ap = AIRPORTS[apId] || AIRPORTS.LIBP;
-    const occupied = new Set(aircraft.map(a => `${a.x},${a.y}`));
+    const occupied = new Set(aircraft.map(a => `${Math.round(a.x)},${Math.round(a.y)}`));
     for (const s of ap.parking) {
-      if (!occupied.has(`${s.x},${s.y}`)) return s;
+      if (!occupied.has(`${Math.round(s.x)},${Math.round(s.y)}`)) return s;
     }
     return ap.parking[0];
   };
 
-  const handleJoin = ({ name, callsign, role }) => {
+  // Verifica marche libere (case-insensitive). Ritorna {ok, by} dove "by" è il nome dell'occupante se ok=false.
+  const checkCallsignFree = (cs) => {
+    const norm = cs.trim().toUpperCase();
+    const conflict = aircraft.find(a => (a.callsign || "").trim().toUpperCase() === norm);
+    if (conflict) return { ok: false, by: conflict.ownerName || "altro utente" };
+    return { ok: true };
+  };
+
+  const handleJoin = ({ name, callsign, role, startAirport }) => {
     if (!uid) { alert("Connessione in corso, riprova tra un attimo."); return; }
-    const userPlaneId = `a_${uid}`;
     const cs = callsign.trim().toUpperCase();
-    const stand = findFreeStand(airport);
-    const apDef = AIRPORTS[airport];
+    // Check marche univoche (esclude il proprio eventuale aereo già registrato)
+    const userPlaneId = `a_${uid}`;
+    const conflict = aircraft.find(a =>
+      (a.callsign || "").trim().toUpperCase() === cs && a.id !== userPlaneId
+    );
+    if (conflict) {
+      alert(`Le marche ${cs} sono già utilizzate da ${conflict.ownerName || "un altro utente"}. Sceglile diverse.`);
+      return;
+    }
+
+    const startApId = startAirport || "LIBP";
+    const apDef = AIRPORTS[startApId];
+    const stand = findFreeStand(startApId);
     const defaultFreq = apDef.freqs[0]?.value || "121.500";
     const userPlane = {
       callsign: cs, type: typeFromCallsign(cs),
       x: stand.x, y: stand.y,
-      heading: apDef.defaultHeading || 90,
+      heading: apDef.defaultHeading || 0,
       squawk: "7000", freq: defaultFreq,
       altitude: 0, status: "PARKED",
       color: PALETTE[aircraft.length % PALETTE.length],
@@ -178,7 +281,7 @@ export default function App() {
   const onMove = (e) => {
     if (drag) {
       const { x, y } = toSvg(e.clientX, e.clientY);
-      patchAircraft(drag.id, { x: clamp(x + drag.offsetX, 20, 980), y: clamp(y + drag.offsetY, 20, 680) });
+      patchAircraft(drag.id, { x: clamp(x + drag.offsetX, 20, WORLD.w - 20), y: clamp(y + drag.offsetY, 20, WORLD.h - 20) });
     } else if (rotateDrag) {
       const ac = aircraft.find(a => a.id === rotateDrag.id);
       if (!ac) return;
@@ -201,8 +304,13 @@ export default function App() {
   const onUp = () => { setDrag(null); setRotateDrag(null); setPanDrag(null); };
 
   // Modalità touch: se è stato un tap (no drag significativo, breve tempo) sulla mappa vuota
-  // e ho un mio aereo selezionato, lo sposto qui
+  // e ho un mio aereo selezionato, lo sposto qui. Evito di triggerare durante pinch (2 dita).
   const onMapUp = (e) => {
+    // Se l'evento è da touch e ci sono ancora dita giù (pinch in corso), non trattare come tap
+    if (e.pointerType === "touch" && e.isPrimary === false) {
+      onUp();
+      return;
+    }
     if (touchMode && tapStartRef.current) {
       const { x: sx, y: sy, t: st } = tapStartRef.current;
       const dx = e.clientX - sx;
@@ -213,7 +321,7 @@ export default function App() {
         const sel = aircraft.find(a => a.id === selectedId);
         if (sel && canControl(sel)) {
           const { x, y } = toSvg(e.clientX, e.clientY);
-          patchAircraft(selectedId, { x: clamp(x, 20, 980), y: clamp(y, 20, 680) });
+          patchAircraft(selectedId, { x: clamp(x, 20, WORLD.w - 20), y: clamp(y, 20, WORLD.h - 20) });
         }
       }
     }
@@ -229,12 +337,14 @@ export default function App() {
     if (!isInstructor) return;
     const cs = `I-${String(7000 + Math.floor(Math.random() * 999)).padStart(4, "0")}`;
     const id = `a_npc_${Date.now()}`;
-    const stand = findFreeStand(airport);
-    const apDef = AIRPORTS[airport];
+    // Se siamo in vista WORLD, gli NPC partono da LIBP per default
+    const targetAp = AIRPORTS[airport] ? airport : "LIBP";
+    const stand = findFreeStand(targetAp);
+    const apDef = AIRPORTS[targetAp];
     upsertAircraft(id, {
       callsign: cs, type: "ULM",
       x: stand.x, y: stand.y,
-      heading: apDef.defaultHeading || 90,
+      heading: apDef.defaultHeading || 0,
       squawk: "7000", freq: apDef.freqs[0]?.value || "121.500",
       altitude: 0, status: "PARKED",
       color: PALETTE[aircraft.length % PALETTE.length],
@@ -261,6 +371,13 @@ export default function App() {
     if (!isInstructor) return;
     setAirport(newId);
   };
+
+  // Lista frequenze unificata (entrambi gli aeroporti + comuni)
+  const allFreqs = [
+    ...AIRPORTS.LIBP.freqs.map(f => ({ ...f, label: `PESC ${f.label}` })),
+    ...AIRPORTS.LIAH.freqs.map(f => ({ ...f, label: `CEL ${f.label}` })),
+    ...COMMON_FREQS,
+  ];
 
   const people = aircraft
     .filter(a => a.ownerRole !== "npc")
@@ -331,13 +448,13 @@ export default function App() {
           />
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1.5, color: "#fbbf24" }}>AEROCLUB DEI MARSI</div>
-            <div className="mono" style={{ fontSize: 11, color: "#94a3b8" }}>ATC TRAINER · {apData.id} {apData.shortName} · {apData.runwayInfo.split('·')[0].trim()} · ELEV {apData.elev}ft</div>
+            <div className="mono" style={{ fontSize: 11, color: "#94a3b8" }}>ATC TRAINER · {viewLabel}{apData ? ` · ${apData.runwayInfo.split('·')[0].trim()} · ELEV ${apData.elev}ft` : " · LIBP+LIAH"}</div>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span className="mono" style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 1 }}>AEROPORTO</span>
+            <span className="mono" style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 1 }}>VISTA</span>
             <select
               value={airport}
               onChange={(e) => handleAirportChange(e.target.value)}
@@ -384,24 +501,25 @@ export default function App() {
       <div className="app-main">
         <div className="map-container grain">
           <div className="mono" style={{ position: "absolute", top: 10, left: 10, fontSize: 12, padding: "5px 9px", borderRadius: 4, background: "rgba(3,10,20,0.85)", color: "#cbd5e1", border: "1px solid #2d5980", zIndex: 10, fontWeight: 600 }}>
-            {apData.id} · {aircraft.length} TFC · {apData.coords}
+            {viewLabel} · {aircraft.length} TFC{apData ? ` · ${apData.coords}` : ""}
           </div>
 
           {touchMode && (
             <div className="mono" style={{
               position: "absolute",
-              top: 10, left: "50%", transform: "translateX(-50%)",
+              bottom: 38, left: "50%", transform: "translateX(-50%)",
               fontSize: 11, padding: "6px 11px", borderRadius: 4,
               background: "rgba(251,191,36,0.18)",
               color: "#fbbf24",
               border: "1px solid #f59e0b",
               zIndex: 10, fontWeight: 700, letterSpacing: 0.5,
-              maxWidth: "60%", textAlign: "center", whiteSpace: "nowrap",
+              maxWidth: "80%", textAlign: "center", whiteSpace: "nowrap",
               overflow: "hidden", textOverflow: "ellipsis",
+              pointerEvents: "none",
             }}>
               {selectedId && aircraft.find(a => a.id === selectedId && (isInstructor || a.ownerId === me.userId))
-                ? "👆 Tocca dove vuoi spostare l'aereo"
-                : "👆 Tocca un aereo per selezionarlo"}
+                ? "👆 Tocca dove vuoi spostare · pizzica per zoom"
+                : "👆 Tocca un aereo · pizzica per zoom"}
             </div>
           )}
 
@@ -425,10 +543,31 @@ export default function App() {
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0e2236" strokeWidth="0.5" /></pattern>
               <pattern id="gridMaj" width="200" height="200" patternUnits="userSpaceOnUse"><path d="M 200 0 L 0 0 0 200" fill="none" stroke="#162e48" strokeWidth="0.8" /></pattern>
             </defs>
-            <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#grid)" />
-            <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#gridMaj)" />
+            <rect x="-2000" y="-2000" width="6500" height="6500" fill="url(#grid)" />
+            <rect x="-2000" y="-2000" width="6500" height="6500" fill="url(#gridMaj)" />
 
-            <apData.Background />
+            {/* Sfondo geografico Abruzzo */}
+            <GeographicBackground />
+
+            {/* Entrambi gli aeroporti sempre visibili */}
+            <AIRPORTS.LIBP.Background />
+            <AIRPORTS.LIAH.Background />
+
+            {/* Etichette aeroporti (sopra ciascuno) */}
+            <g>
+              <text x={AIRPORTS.LIBP.center.x} y={AIRPORTS.LIBP.center.y - 450} textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: "#fbbf24", fontSize: 22, fontWeight: 700, letterSpacing: 3, pointerEvents: "none" }}>
+                LIBP · PESCARA
+              </text>
+              <text x={AIRPORTS.LIAH.center.x} y={AIRPORTS.LIAH.center.y - 250} textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: "#fbbf24", fontSize: 18, fontWeight: 700, letterSpacing: 3, pointerEvents: "none" }}>
+                LIAH · CELANO
+              </text>
+            </g>
+
+            {/* Manica a vento per ogni aeroporto */}
+            <g style={{ pointerEvents: "none" }}>
+              <WindIndicator x={AIRPORTS.LIBP.windPos.x} y={AIRPORTS.LIBP.windPos.y} dir={wind?.LIBP?.dir ?? 0} speed={wind?.LIBP?.speed ?? 0} label="LIBP" />
+              <WindIndicator x={AIRPORTS.LIAH.windPos.x} y={AIRPORTS.LIAH.windPos.y} dir={wind?.LIAH?.dir ?? 0} speed={wind?.LIAH?.speed ?? 0} label="LIAH" />
+            </g>
 
             {aircraft.map((ac) => (
               <AircraftMarker
@@ -444,20 +583,28 @@ export default function App() {
             ))}
           </svg>
 
-          <div className="mono" style={{ position: "absolute", bottom: 8, left: 8, fontSize: 11, padding: "5px 9px", borderRadius: 4, background: "rgba(3,10,20,0.85)", color: "#cbd5e1", border: "1px solid #2d5980", maxWidth: "70%", fontWeight: 500 }}>
-            {apData.runwayInfo} · Non in scala. Da non usare durante le operazioni di volo.
+          <div className="mono" style={{ position: "absolute", bottom: 8, left: 8, fontSize: 11, padding: "5px 9px", borderRadius: 4, background: "rgba(3,10,20,0.85)", color: "#cbd5e1", border: "1px solid #2d5980", maxWidth: "55%", fontWeight: 500 }}>
+            Non in scala. Da non usare durante le operazioni di volo.
+          </div>
+
+          <div className="mono" style={{ position: "absolute", bottom: 8, right: 8, fontSize: 10, padding: "4px 8px", borderRadius: 4, background: "rgba(3,10,20,0.85)", color: "#94a3b8", border: "1px solid #2d5980", fontWeight: 600, letterSpacing: 0.5 }}>
+            {APP_VERSION}
           </div>
         </div>
 
         <aside className="sidebar">
           <PresentiPanel people={people} myUid={me.userId} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} />
 
+          {isInstructor && (
+            <WindControlPanel wind={wind} setWind={setWind} />
+          )}
+
           {isInstructor && aircraft.length > 0 && (
             <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} />
           )}
 
           {selected ? (
-            <Console ac={selected} update={updateSelected} isInstructor={isInstructor} canEdit={canControl(selected)} freqs={apData.freqs} touchMode={touchMode} />
+            <Console ac={selected} update={updateSelected} isInstructor={isInstructor} canEdit={canControl(selected)} freqs={allFreqs} touchMode={touchMode} />
           ) : (
             <PanelBox title="Consolle">
               <div className="mono" style={{ fontSize: 12, padding: 24, textAlign: "center", color: "#94a3b8" }}>Seleziona un aereo dalla mappa o dalla lista.</div>
@@ -475,6 +622,7 @@ function JoinScreen({ onJoin, ready }) {
   const [name, setName] = useState("");
   const [callsign, setCallsign] = useState("");
   const [role, setRole] = useState("pilota");
+  const [startAirport, setStartAirport] = useState("LIBP");
   const canJoin = ready && name.trim().length >= 2 && callsign.trim().length >= 4;
   return (
     <div style={{ fontFamily: "'Outfit', system-ui, sans-serif", background: "radial-gradient(ellipse at top, #0b1b2b 0%, #050a13 70%, #02060c 100%)", minHeight: "100vh", color: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -517,15 +665,27 @@ function JoinScreen({ onJoin, ready }) {
             </div>
             <input type="text" value={callsign} onChange={(e) => setCallsign(e.target.value.toUpperCase().slice(0, 8))} placeholder="oppure custom (es. I-7777)" className="mono" style={{ width: "100%", padding: "10px 12px", borderRadius: 4, background: "#02060c", border: "1px solid #2d5980", color: "#fbbf24", fontWeight: 700, fontSize: 15, letterSpacing: 2, textAlign: "center" }} />
           </Field>
+          <Field label="Aeroporto di partenza">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <button onClick={() => setStartAirport("LIBP")} className="mono" style={{ padding: "10px 12px", borderRadius: 4, fontSize: 13, fontWeight: 700, letterSpacing: 1, background: startAirport === "LIBP" ? "rgba(251,191,36,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${startAirport === "LIBP" ? "#f59e0b" : "#2d5980"}`, color: startAirport === "LIBP" ? "#fbbf24" : "#94a3b8", cursor: "pointer", textAlign: "center" }}>
+                <div>LIBP</div>
+                <div style={{ fontSize: 10, marginTop: 2, fontWeight: 500 }}>Pescara</div>
+              </button>
+              <button onClick={() => setStartAirport("LIAH")} className="mono" style={{ padding: "10px 12px", borderRadius: 4, fontSize: 13, fontWeight: 700, letterSpacing: 1, background: startAirport === "LIAH" ? "rgba(251,191,36,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${startAirport === "LIAH" ? "#f59e0b" : "#2d5980"}`, color: startAirport === "LIAH" ? "#fbbf24" : "#94a3b8", cursor: "pointer", textAlign: "center" }}>
+                <div>LIAH</div>
+                <div style={{ fontSize: 10, marginTop: 2, fontWeight: 500 }}>Celano</div>
+              </button>
+            </div>
+          </Field>
           <Field label="Ruolo">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               <button onClick={() => setRole("pilota")} className="mono" style={{ padding: "10px 12px", borderRadius: 4, fontSize: 14, fontWeight: 700, letterSpacing: 1, background: role === "pilota" ? "rgba(125,211,252,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${role === "pilota" ? "#0284c7" : "#2d5980"}`, color: role === "pilota" ? "#7dd3fc" : "#94a3b8", cursor: "pointer" }}>PILOTA</button>
               <button onClick={() => setRole("istruttore")} className="mono" style={{ padding: "10px 12px", borderRadius: 4, fontSize: 14, fontWeight: 700, letterSpacing: 1, background: role === "istruttore" ? "rgba(252,165,165,0.15)" : "rgba(7,18,30,0.6)", border: `1px solid ${role === "istruttore" ? "#dc2626" : "#2d5980"}`, color: role === "istruttore" ? "#fca5a5" : "#94a3b8", cursor: "pointer" }}>ISTRUTTORE</button>
             </div>
-            <div style={{ fontSize: 12, marginTop: 6, color: "#94a3b8" }}>{role === "pilota" ? "Controllerai solo il tuo aereo." : "Potrai gestire tutto il traffico, cambiare aeroporto, forzare emergenze."}</div>
+            <div style={{ fontSize: 12, marginTop: 6, color: "#94a3b8" }}>{role === "pilota" ? "Controllerai solo il tuo aereo." : "Potrai gestire tutto il traffico, cambiare vista, forzare emergenze."}</div>
           </Field>
-          <button onClick={() => onJoin({ name: name.trim(), callsign: callsign.trim().toUpperCase(), role })} disabled={!canJoin} className="mono" style={{ width: "100%", padding: "13px 16px", fontWeight: 700, letterSpacing: 2, borderRadius: 4, background: canJoin ? "linear-gradient(135deg,#fbbf24,#f59e0b)" : "#1e3a5f", color: canJoin ? "#0b1b2b" : "#64748b", cursor: canJoin ? "pointer" : "not-allowed", border: "none", fontSize: 15 }}>ENTRA NEL BRIEFING →</button>
-          <div className="mono" style={{ fontSize: 11, textAlign: "center", color: "#64748b" }}>Cmdt. F. Lozzi · Vicepres. A. Felli</div>
+          <button onClick={() => onJoin({ name: name.trim(), callsign: callsign.trim().toUpperCase(), role, startAirport })} disabled={!canJoin} className="mono" style={{ width: "100%", padding: "13px 16px", fontWeight: 700, letterSpacing: 2, borderRadius: 4, background: canJoin ? "linear-gradient(135deg,#fbbf24,#f59e0b)" : "#1e3a5f", color: canJoin ? "#0b1b2b" : "#64748b", cursor: canJoin ? "pointer" : "not-allowed", border: "none", fontSize: 15 }}>ENTRA NEL BRIEFING →</button>
+          <div className="mono" style={{ fontSize: 11, textAlign: "center", color: "#64748b" }}>Cmdt. F. Lozzi · Vicepres. A. Felli · {APP_VERSION}</div>
         </div>
       </div>
     </div>
@@ -547,6 +707,56 @@ function InputModeToggle({ touchMode, setTouchMode }) {
       <button onClick={() => setTouchMode(false)} style={{ padding: "8px 10px", fontWeight: 700, letterSpacing: 1, background: !touchMode ? "#1e3a5f" : "transparent", color: !touchMode ? "#7dd3fc" : "#64748b", border: "none", cursor: "pointer" }}>🖱 MOUSE</button>
       <button onClick={() => setTouchMode(true)} style={{ padding: "8px 10px", fontWeight: 700, letterSpacing: 1, background: touchMode ? "#1e3a5f" : "transparent", color: touchMode ? "#7dd3fc" : "#64748b", border: "none", cursor: "pointer" }}>👆 TOUCH</button>
     </div>
+  );
+}
+
+// ============================================================
+// WindControlPanel: pannello di controllo vento (solo istruttore)
+// ============================================================
+function WindControlPanel({ wind, setWind }) {
+  if (!wind) return null;
+  const rows = [
+    { id: "LIBP", label: "LIBP Pescara", color: "#7dd3fc" },
+    { id: "LIAH", label: "LIAH Celano",  color: "#fbbf24" },
+  ];
+  return (
+    <PanelBox title="Vento">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.map((r) => {
+          const w = wind[r.id] || { dir: 0, speed: 0 };
+          return (
+            <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4, padding: "8px 10px", borderRadius: 4, background: "rgba(7,18,30,0.6)", border: "1px solid #2d5980" }}>
+              <div className="mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: r.color }}>{r.label}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <label className="mono" style={{ fontSize: 10, color: "#94a3b8", display: "flex", flexDirection: "column", gap: 2 }}>
+                  Direzione (°)
+                  <input
+                    type="number" min="0" max="359"
+                    value={w.dir}
+                    onChange={(e) => setWind(r.id, e.target.value, w.speed)}
+                    className="mono"
+                    style={{ padding: "5px 6px", borderRadius: 3, background: "#02060c", border: "1px solid #2d5980", color: "#f1f5f9", fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                  />
+                </label>
+                <label className="mono" style={{ fontSize: 10, color: "#94a3b8", display: "flex", flexDirection: "column", gap: 2 }}>
+                  Velocità (kt)
+                  <input
+                    type="number" min="0" max="99"
+                    value={w.speed}
+                    onChange={(e) => setWind(r.id, w.dir, e.target.value)}
+                    className="mono"
+                    style={{ padding: "5px 6px", borderRadius: 3, background: "#02060c", border: "1px solid #2d5980", color: "#f1f5f9", fontSize: 13, fontWeight: 700, textAlign: "center" }}
+                  />
+                </label>
+              </div>
+              <div className="mono" style={{ fontSize: 10, color: "#94a3b8", textAlign: "center" }}>
+                {w.speed === 0 ? "CALMA" : `Vento da ${String(w.dir).padStart(3, "0")}° a ${String(w.speed).padStart(2, "0")} nodi`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </PanelBox>
   );
 }
 
@@ -650,15 +860,28 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
   const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
   const status = STATUSES.find((s) => s.value === ac.status) || STATUSES[0];
   const handleR = 26;
-  // In touch mode l'area di tap è molto più grande per evitare miss
   const HIT_R = touchMode ? 40 : 30;
+
+  // Targhetta compatta: 3 righe (marche / nome·freq / sqk·alt·status)
+  const LABEL_W = 84;
+  const LABEL_H = 38;
+  const labelY = 24; // distanza dal centro aereo
+
+  // Frequenza compatta (es: 118.450 -> 118.45)
+  const compactFreq = (f) => {
+    if (!f) return "—";
+    const s = String(f);
+    return s.length > 7 ? s.slice(0, 7) : s;
+  };
+  const fullName = ac.ownerName || (ac.ownerRole === "npc" ? "NPC" : "—");
+  // Mostro solo il primo nome se è lungo
+  const shortName = fullName.split(" ")[0].slice(0, 8);
 
   return (
     <g transform={`translate(${ac.x} ${ac.y})`}>
       {/* Pulse emergenza */}
       {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
 
-      {/* Tutto il visivo è dentro un gruppo che NON intercetta puntatori — gli eventi cadono attraverso al rect hit area sotto/sopra */}
       <g style={{ pointerEvents: "none" }}>
         {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.85" />}
         {selected && !controllable && <circle r={handleR} fill="none" stroke="#fca5a5" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.7" />}
@@ -667,7 +890,6 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
           <path d="M 0 -13 L 2 -8 L 2 0 L 13 5 L 13 7 L 2 5 L 2 9 L 6 13 L 6 14 L 0 13 L -6 14 L -6 13 L -2 9 L -2 5 L -13 7 L -13 5 L -2 0 L -2 -8 Z" fill={ac.color} stroke="#0b1b2b" strokeWidth="1" strokeLinejoin="round" opacity={controllable ? 1 : 0.8} />
         </g>
 
-        {/* Badge TU */}
         {isMine && (
           <g transform="translate(-16 -16)">
             <circle r="7" fill="#fbbf24" stroke="#0b1b2b" strokeWidth="1.2" />
@@ -675,26 +897,34 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
           </g>
         )}
 
-        {/* Etichetta sotto */}
-        <g transform="translate(0 32)">
-          <rect x="-36" y="-10" width="72" height="26" rx="3" fill="rgba(3,10,20,0.92)" stroke={selected ? ac.color : "#2d5980"} strokeWidth="1.2" />
-          <text x="0" y="2" textAnchor="middle" className="mono" style={{ fill: ac.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{ac.callsign}</text>
-          <text x="0" y="12" textAnchor="middle" className="mono" style={{ fill: status.color, fontSize: 8, fontWeight: 600 }}>
-            {ac.altitude > 0 ? `${ac.altitude}ft · ${status.label}` : status.label}
+        {/* Targhetta compatta */}
+        <g transform={`translate(0 ${labelY})`}>
+          <rect x={-LABEL_W/2} y={-2} width={LABEL_W} height={LABEL_H} rx="2.5" fill="rgba(3,10,20,0.62)" stroke={selected ? ac.color : (isEmergency ? "#ef4444" : "#2d5980")} strokeWidth="0.9" />
+          {/* Riga 1: Marche */}
+          <text x="0" y="7" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: ac.color, fontSize: 9, fontWeight: 700, letterSpacing: 0.8 }}>{ac.callsign}</text>
+          {/* Riga 2: Nome · Freq (inline, colori diversi) */}
+          <text x="0" y="17" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 7, fontWeight: 600 }}>
+            <tspan style={{ fill: "#cbd5e1" }}>{shortName}</tspan>
+            <tspan style={{ fill: "#a3e635" }}> · {compactFreq(ac.freq)}</tspan>
+          </text>
+          {/* Riga 3: SQK · ALT · stato (abbr) */}
+          <text x="0" y="28" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 7, fontWeight: 700 }}>
+            <tspan style={{ fill: isEmergency ? "#fca5a5" : "#7dd3fc" }}>{ac.squawk}</tspan>
+            <tspan style={{ fill: "#fbbf24" }}> · {ac.altitude}ft</tspan>
+            <tspan style={{ fill: status.color }}> · {status.abbr}</tspan>
           </text>
         </g>
       </g>
 
-      {/* Hit area: copre aereo + etichetta. È l'unico nodo che riceve eventi. Posto in coda per essere sopra (z-order) tutto il gruppo visivo. */}
+      {/* Hit area: copre aereo + etichetta */}
       <rect
         x={-HIT_R} y={-HIT_R}
-        width={HIT_R * 2} height={HIT_R * 2 + 28}
+        width={HIT_R * 2} height={HIT_R + labelY + LABEL_H}
         fill="transparent"
         onPointerDown={onPointerDown}
         style={{ cursor: controllable ? (touchMode ? "pointer" : "grab") : "pointer", touchAction: "none" }}
       />
 
-      {/* Maniglia di rotazione: solo in mouse mode + aereo selezionato e controllabile */}
       {!touchMode && selected && controllable && (
         <g transform={`rotate(${ac.heading})`}>
           <line x1="0" y1="0" x2="0" y2={-handleR} stroke={ac.color} strokeWidth="1" opacity="0.4" style={{ pointerEvents: "none" }} />

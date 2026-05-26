@@ -6,16 +6,10 @@ import {
 
 const SESSION_ID = "main";
 
-const DEFAULT_WIND = {
-  LIBP: { dir: 40,  speed: 0 },  // calma da pista 04
-  LIAH: { dir: 80,  speed: 0 },  // calma da pista 08
-};
-
 export function useSession() {
   const [uid, setUid] = useState(null);
   const [aircraft, setAircraft] = useState([]);
-  const [airport, setAirportLocal] = useState("WORLD");
-  const [wind, setWindLocal] = useState(DEFAULT_WIND);
+  const [airport, setAirportLocal] = useState("LIBP");
 
   // Login anonimo
   useEffect(() => {
@@ -38,30 +32,12 @@ export function useSession() {
     return unsub;
   }, [uid]);
 
-  // Sottoscrizione airport (vista predefinita)
+  // Sottoscrizione airport (sincronizzato a tutti)
   useEffect(() => {
     if (!uid) return;
     const aRef = ref(db, `sessions/${SESSION_ID}/state/airport`);
     const unsub = onValue(aRef, (snap) => {
-      setAirportLocal(snap.val() || "WORLD");
-    });
-    return unsub;
-  }, [uid]);
-
-  // Sottoscrizione vento
-  useEffect(() => {
-    if (!uid) return;
-    const wRef = ref(db, `sessions/${SESSION_ID}/state/wind`);
-    const unsub = onValue(wRef, (snap) => {
-      const data = snap.val();
-      if (data) {
-        setWindLocal({
-          LIBP: { dir: Number(data.LIBP?.dir ?? DEFAULT_WIND.LIBP.dir), speed: Number(data.LIBP?.speed ?? 0) },
-          LIAH: { dir: Number(data.LIAH?.dir ?? DEFAULT_WIND.LIAH.dir), speed: Number(data.LIAH?.speed ?? 0) },
-        });
-      } else {
-        setWindLocal(DEFAULT_WIND);
-      }
+      setAirportLocal(snap.val() || "LIBP");
     });
     return unsub;
   }, [uid]);
@@ -85,16 +61,9 @@ export function useSession() {
   const resetAllTraffic = () =>
     set(ref(db, `sessions/${SESSION_ID}/aircraft`), null);
 
-  // Aggiorna il vento di un aeroporto (solo istruttore)
-  const setWind = (airportId, dir, speed) => {
-    const d = Math.max(0, Math.min(359, Math.round(Number(dir) || 0)));
-    const s = Math.max(0, Math.min(99, Math.round(Number(speed) || 0)));
-    return update(ref(db, `sessions/${SESSION_ID}/state/wind/${airportId}`), { dir: d, speed: s });
-  };
-
   return {
-    uid, aircraft, airport, wind,
+    uid, aircraft, airport,
     upsertAircraft, patchAircraft, deleteAircraft, setupDisconnect,
-    setAirport, resetAllTraffic, setWind,
+    setAirport, resetAllTraffic,
   };
 }

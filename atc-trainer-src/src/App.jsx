@@ -3,10 +3,11 @@ import { useSession } from "./useSession";
 import {
   AIRPORTS, AIRPORT_OPTIONS, WORLD, WORLD_FOCUS,
   REPORTING_POINTS, COMMON_FREQS, GeographicBackground, WindIndicator,
+  freqAbbr,
 } from "./airports";
 
 // Versione applicazione
-const APP_VERSION = "v1.4 · 26/05/2026";
+const APP_VERSION = "v1.7 · 26/05/2026";
 
 const STATUSES = [
   { value: "PARKED",   label: "Parked",        abbr: "PK", color: "#94a3b8" },
@@ -69,6 +70,11 @@ export default function App() {
   const [touchMode, setTouchMode] = useState(detectTouchDevice());
   const svgRef = useRef(null);
   const tapStartRef = useRef(null);
+  const isPinchingRef = useRef(false);
+  const viewBoxRef = useRef(DEFAULT_VIEWBOX);
+
+  // Mantengo viewBoxRef sincronizzato con lo state per leggerlo dentro touch handlers
+  useEffect(() => { viewBoxRef.current = viewBox; }, [viewBox]);
 
   const apData = AIRPORTS[airport] || null;
   const viewLabel = apData
@@ -119,59 +125,128 @@ export default function App() {
     return () => svg.removeEventListener("wheel", handler);
   }, [toSvg, me]);
 
-  // PINCH-TO-ZOOM (touch). Quando ci sono 2 dita: scala la viewBox attorno al midpoint.
-  // Quando torna a una o zero dita: rilascia il gesto.
+  // PINCH-TO-ZOOM (touch). 2 dita = zoom attorno al midpoint.
+  // ============================================================
+  // GESTIONE TOUCH (mobile): gestita TUTTA via touch events nativi.
+  //  - 1 dito che si muove: pan della mappa
+  //  - 1 dito fermo (tap): se aereo selezionato, lo sposta lì
+  //  - 2 dita: pinch zoom (centrato sul midpoint delle dita)
+  // I pointer events React sono ignorati su touch (vedi onMapDown/onMove/onMapUp).
+  // ============================================================
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
 
-    let pinchState = null; // { startDist, startMid, startVB }
+    // Stato del gesto corrente (uno alla volta)
+    let gesture = null; // {kind:"pan", startClientX, startClientY, startVB, moved, startedAt}
+                        // o {kind:"pinch", startDist, startVB, svgMid}
+    // Se l'utente ha toccato un aereo, vogliamo che la selezione vinca sul tap-to-move:
+    // l'aereo lo gestisce via onPointerDown del marker. Qui non interferiamo se
+    // l'evento target è interno a un gruppo aereo (target.closest("[data-aircraft]")).
 
     const dist = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
     const mid  = (t1, t2) => ({ x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 });
 
+    const clientToSvg = (cx, cy) => {
+      const rect = svg.getBoundingClientRect();
+      const vbAttr = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+      const vb = { x: vbAttr[0], y: vbAttr[1], w: vbAttr[2], h: vbAttr[3] };
+      return {
+        x: vb.x + ((cx - rect.left) / rect.width) * vb.w,
+        y: vb.y + ((cy - rect.top)  / rect.height) * vb.h,
+        vb,
+      };
+    };
+
     const onTouchStart = (e) => {
-      if (e.touches.length === 2) {
+      // Se il tocco parte da un aereo, lasciamo che pointer events selezionino l'aereo.
+      // (Non avviamo né pan né pinch, ma se diventano 2 dita la pinch parte comunque).
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        const isOnAircraft = !!(t.target && t.target.closest && t.target.closest("[data-aircraft]"));
+        if (isOnAircraft) {
+          // L'aereo gestisce la selezione via pointer. Non avviamo pan.
+          gesture = null;
+          isPinchingRef.current = false;
+          return;
+        }
+        gesture = {
+          kind: "pan",
+          startClientX: t.clientX,
+          startClientY: t.clientY,
+          startVB: { ...viewBoxRef.current },
+          moved: false,
+          startedAt: Date.now(),
+        };
+        isPinchingRef.current = false;
+      } else if (e.touches.length >= 2) {
         e.preventDefault();
         const t1 = e.touches[0], t2 = e.touches[1];
         const midClient = mid(t1, t2);
-        // Converto il midpoint in coordinate SVG usando la viewBox corrente
-        const rect = svg.getBoundingClientRect();
-        // Leggo la viewBox attuale dall'attributo per essere certo del valore di partenza
-        const vbAttr = svg.getAttribute("viewBox").split(/\s+/).map(Number);
-        const vbNow = { x: vbAttr[0], y: vbAttr[1], w: vbAttr[2], h: vbAttr[3] };
-        const svgMid = {
-          x: vbNow.x + ((midClient.x - rect.left) / rect.width) * vbNow.w,
-          y: vbNow.y + ((midClient.y - rect.top)  / rect.height) * vbNow.h,
-        };
-        pinchState = {
+        const { x, y, vb } = clientToSvg(midClient.x, midClient.y);
+        gesture = {
+          kind: "pinch",
           startDist: dist(t1, t2),
-          startVB: vbNow,
-          svgMid,
+          startVB: vb,
+          svgMid: { x, y },
         };
+        isPinchingRef.current = true;
       }
     };
 
     const onTouchMove = (e) => {
-      if (e.touches.length === 2 && pinchState) {
+      if (!gesture) return;
+      if (gesture.kind === "pan" && e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        const dx = t.clientX - gesture.startClientX;
+        const dy = t.clientY - gesture.startClientY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) gesture.moved = true;
+        const rect = svg.getBoundingClientRect();
+        const sx = gesture.startVB.w / rect.width;
+        const sy = gesture.startVB.h / rect.height;
+        setViewBox({
+          x: gesture.startVB.x - dx * sx,
+          y: gesture.startVB.y - dy * sy,
+          w: gesture.startVB.w, h: gesture.startVB.h,
+        });
+      } else if (gesture.kind === "pinch" && e.touches.length >= 2) {
         e.preventDefault();
         const t1 = e.touches[0], t2 = e.touches[1];
         const newDist = dist(t1, t2);
-        const scale = pinchState.startDist / newDist; // >1 = zoom out, <1 = zoom in
-        const newW = clamp(pinchState.startVB.w * scale, 200, WORLD.w * 1.2);
-        const ratio = pinchState.startVB.h / pinchState.startVB.w;
+        if (newDist < 10) return;
+        const scale = gesture.startDist / newDist; // >1 = zoom out, <1 = zoom in
+        const newW = clamp(gesture.startVB.w * scale, 200, WORLD.w * 1.5);
+        const ratio = gesture.startVB.h / gesture.startVB.w;
         const newH = newW * ratio;
-        // Mantengo il midpoint del gesto fisso in coordinate SVG
-        const newX = pinchState.svgMid.x - (pinchState.svgMid.x - pinchState.startVB.x) * (newW / pinchState.startVB.w);
-        const newY = pinchState.svgMid.y - (pinchState.svgMid.y - pinchState.startVB.y) * (newH / pinchState.startVB.h);
+        const newX = gesture.svgMid.x - (gesture.svgMid.x - gesture.startVB.x) * (newW / gesture.startVB.w);
+        const newY = gesture.svgMid.y - (gesture.svgMid.y - gesture.startVB.y) * (newH / gesture.startVB.h);
         setViewBox({ x: newX, y: newY, w: newW, h: newH });
-      } else if (e.touches.length < 2) {
-        pinchState = null;
       }
     };
 
-    const onTouchEnd = () => {
-      pinchState = null;
+    const onTouchEnd = (e) => {
+      // Se era un pan: se non si è mosso e è breve, è un tap → sposta aereo (se controllabile)
+      if (gesture && gesture.kind === "pan" && !gesture.moved) {
+        const dt = Date.now() - gesture.startedAt;
+        if (dt < 400 && e.changedTouches.length > 0) {
+          const t = e.changedTouches[0];
+          const { x, y } = clientToSvg(t.clientX, t.clientY);
+          const sel = aircraft.find(a => a.id === selectedId);
+          if (sel && canControl(sel)) {
+            patchAircraft(selectedId, {
+              x: clamp(x, 20, WORLD.w - 20),
+              y: clamp(y, 20, WORLD.h - 20),
+            });
+          }
+        }
+      }
+      gesture = null;
+      if (e.touches.length === 0) {
+        // Lascio un piccolo delay prima di rilasciare il flag pinch
+        setTimeout(() => { isPinchingRef.current = false; }, 100);
+      }
     };
 
     svg.addEventListener("touchstart", onTouchStart, { passive: false });
@@ -184,7 +259,7 @@ export default function App() {
       svg.removeEventListener("touchend",   onTouchEnd);
       svg.removeEventListener("touchcancel",onTouchEnd);
     };
-  }, []);
+  }, [aircraft, selectedId]);
 
   const zoomIn = () => setViewBox((vb) => ({ x: vb.x + vb.w*0.1, y: vb.y + vb.h*0.1, w: clamp(vb.w*0.8, 200, WORLD.w * 1.2), h: clamp(vb.h*0.8, 140, WORLD.h * 1.2) }));
   const zoomOut = () => setViewBox((vb) => ({ x: vb.x - vb.w*0.125, y: vb.y - vb.h*0.125, w: clamp(vb.w*1.25, 200, WORLD.w * 1.2), h: clamp(vb.h*1.25, 140, WORLD.h * 1.2) }));
@@ -252,6 +327,7 @@ export default function App() {
   const myColor = aircraft.find(a => a.ownerId === me.userId)?.color || PALETTE[0];
 
   const onPlaneDown = (e, ac) => {
+    if (isPinchingRef.current) return;
     e.stopPropagation();
     setSelectedId(ac.id);
     if (!canControl(ac)) return;
@@ -269,16 +345,17 @@ export default function App() {
   };
 
   const onMapDown = (e) => {
+    // In touch mode il pan/tap è gestito interamente dai touch events nativi
+    if (touchMode) return;
     if (drag || rotateDrag) return;
-    if (touchMode) {
-      // Salva inizio per riconoscere il tap (vs trascinamento accidentale)
-      tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
-      return;
-    }
+    if (isPinchingRef.current) return;
+    // Setup pan (mouse only)
     setPanDrag({ startClientX: e.clientX, startClientY: e.clientY, startVB: { ...viewBox } });
   };
 
   const onMove = (e) => {
+    if (touchMode) return; // touch handled altrove
+    if (isPinchingRef.current) return;
     if (drag) {
       const { x, y } = toSvg(e.clientX, e.clientY);
       patchAircraft(drag.id, { x: clamp(x + drag.offsetX, 20, WORLD.w - 20), y: clamp(y + drag.offsetY, 20, WORLD.h - 20) });
@@ -303,28 +380,10 @@ export default function App() {
 
   const onUp = () => { setDrag(null); setRotateDrag(null); setPanDrag(null); };
 
-  // Modalità touch: se è stato un tap (no drag significativo, breve tempo) sulla mappa vuota
-  // e ho un mio aereo selezionato, lo sposto qui. Evito di triggerare durante pinch (2 dita).
-  const onMapUp = (e) => {
-    // Se l'evento è da touch e ci sono ancora dita giù (pinch in corso), non trattare come tap
-    if (e.pointerType === "touch" && e.isPrimary === false) {
-      onUp();
-      return;
-    }
-    if (touchMode && tapStartRef.current) {
-      const { x: sx, y: sy, t: st } = tapStartRef.current;
-      const dx = e.clientX - sx;
-      const dy = e.clientY - sy;
-      const dt = Date.now() - st;
-      tapStartRef.current = null;
-      if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 700) {
-        const sel = aircraft.find(a => a.id === selectedId);
-        if (sel && canControl(sel)) {
-          const { x, y } = toSvg(e.clientX, e.clientY);
-          patchAircraft(selectedId, { x: clamp(x, 20, WORLD.w - 20), y: clamp(y, 20, WORLD.h - 20) });
-        }
-      }
-    }
+  // In touch mode il tap/spostamento è gestito da touch events (sopra).
+  // In mouse mode questo è un classico mouseup.
+  const onMapUp = () => {
+    if (touchMode) return;
     onUp();
   };
 
@@ -507,19 +566,20 @@ export default function App() {
           {touchMode && (
             <div className="mono" style={{
               position: "absolute",
-              bottom: 38, left: "50%", transform: "translateX(-50%)",
-              fontSize: 11, padding: "6px 11px", borderRadius: 4,
-              background: "rgba(251,191,36,0.18)",
-              color: "#fbbf24",
-              border: "1px solid #f59e0b",
-              zIndex: 10, fontWeight: 700, letterSpacing: 0.5,
-              maxWidth: "80%", textAlign: "center", whiteSpace: "nowrap",
+              top: 38, left: 10,
+              fontSize: 8, padding: "2px 5px", borderRadius: 3,
+              background: "rgba(7,18,30,0.7)",
+              color: "#94a3b8",
+              border: "1px solid #1e3a5f",
+              zIndex: 10, fontWeight: 500, letterSpacing: 0.2,
+              maxWidth: "75%", whiteSpace: "nowrap",
               overflow: "hidden", textOverflow: "ellipsis",
               pointerEvents: "none",
+              opacity: 0.75,
             }}>
               {selectedId && aircraft.find(a => a.id === selectedId && (isInstructor || a.ownerId === me.userId))
-                ? "👆 Tocca dove vuoi spostare · pizzica per zoom"
-                : "👆 Tocca un aereo · pizzica per zoom"}
+                ? "tap=posiziona · drag=mappa · pinch=zoom"
+                : "tap=seleziona · drag=mappa · pinch=zoom"}
             </div>
           )}
 
@@ -593,14 +653,24 @@ export default function App() {
         </div>
 
         <aside className="sidebar">
-          <PresentiPanel people={people} myUid={me.userId} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} />
+          {/* ISTRUTTORE: StripBoard in cima (con nomi piloti incorporati) */}
+          {isInstructor && aircraft.length > 0 && (
+            <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} />
+          )}
+          {/* ISTRUTTORE senza traffico: messaggio segnaposto */}
+          {isInstructor && aircraft.length === 0 && (
+            <PanelBox title="Strip Board">
+              <div className="mono" style={{ fontSize: 12, padding: 18, textAlign: "center", color: "#94a3b8" }}>Nessun aereo nel sistema. Premi + AIRCRAFT per aggiungere un NPC.</div>
+            </PanelBox>
+          )}
+
+          {/* PILOTA: lista presenti compatta */}
+          {!isInstructor && (
+            <PresentiPanel people={people} myUid={me.userId} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} />
+          )}
 
           {isInstructor && (
             <WindControlPanel wind={wind} setWind={setWind} />
-          )}
-
-          {isInstructor && aircraft.length > 0 && (
-            <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} />
           )}
 
           {selected ? (
@@ -803,7 +873,12 @@ function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
                 border: `1px solid ${isSelected ? ac.color : isEmergency ? "#ef4444" : "#2d5980"}`,
               }}
             >
-              <span style={{ color: ac.color, fontWeight: 700, letterSpacing: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ac.callsign}</span>
+              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <span style={{ color: ac.color, fontWeight: 700, letterSpacing: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ac.callsign}</span>
+                <span style={{ color: "#94a3b8", fontWeight: 500, fontSize: 8, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: 0 }}>
+                  {(ac.ownerName || (ac.ownerRole === "npc" ? "NPC" : "—")).slice(0, 10)}
+                </span>
+              </div>
               <span style={{ color: isEmergency ? "#fca5a5" : "#7dd3fc", fontWeight: 700 }}>{ac.squawk}</span>
               <span style={{ color: "#fbbf24" }}>{ac.altitude}ft</span>
               <span style={{ color: "#a3e635", fontSize: 10 }}>{ac.freq}</span>
@@ -862,24 +937,16 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
   const handleR = 26;
   const HIT_R = touchMode ? 40 : 30;
 
-  // Targhetta compatta: 3 righe (marche / nome·freq / sqk·alt·status)
-  const LABEL_W = 84;
-  const LABEL_H = 38;
-  const labelY = 24; // distanza dal centro aereo
+  // Targhetta ULTRA-compatta: 3 righe ravvicinate
+  const LABEL_W = 66;
+  const LABEL_H = 28;
+  const labelY = 22;
 
-  // Frequenza compatta (es: 118.450 -> 118.45)
-  const compactFreq = (f) => {
-    if (!f) return "—";
-    const s = String(f);
-    return s.length > 7 ? s.slice(0, 7) : s;
-  };
   const fullName = ac.ownerName || (ac.ownerRole === "npc" ? "NPC" : "—");
-  // Mostro solo il primo nome se è lungo
-  const shortName = fullName.split(" ")[0].slice(0, 8);
+  const shortName = fullName.split(" ")[0].slice(0, 7);
 
   return (
-    <g transform={`translate(${ac.x} ${ac.y})`}>
-      {/* Pulse emergenza */}
+    <g transform={`translate(${ac.x} ${ac.y})`} data-aircraft={ac.id}>
       {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
 
       <g style={{ pointerEvents: "none" }}>
@@ -897,26 +964,25 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
           </g>
         )}
 
-        {/* Targhetta compatta */}
+        {/* Targhetta ultra-compatta: marche / nome·FREQ / SQK·ALT·ST */}
         <g transform={`translate(0 ${labelY})`}>
-          <rect x={-LABEL_W/2} y={-2} width={LABEL_W} height={LABEL_H} rx="2.5" fill="rgba(3,10,20,0.62)" stroke={selected ? ac.color : (isEmergency ? "#ef4444" : "#2d5980")} strokeWidth="0.9" />
+          <rect x={-LABEL_W/2} y={-2} width={LABEL_W} height={LABEL_H} rx="2" fill="rgba(3,10,20,0.62)" stroke={selected ? ac.color : (isEmergency ? "#ef4444" : "#2d5980")} strokeWidth="0.8" />
           {/* Riga 1: Marche */}
-          <text x="0" y="7" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: ac.color, fontSize: 9, fontWeight: 700, letterSpacing: 0.8 }}>{ac.callsign}</text>
-          {/* Riga 2: Nome · Freq (inline, colori diversi) */}
-          <text x="0" y="17" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 7, fontWeight: 600 }}>
-            <tspan style={{ fill: "#cbd5e1" }}>{shortName}</tspan>
-            <tspan style={{ fill: "#a3e635" }}> · {compactFreq(ac.freq)}</tspan>
+          <text x="0" y="5" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: ac.color, fontSize: 8, fontWeight: 700, letterSpacing: 0.4 }}>{ac.callsign}</text>
+          {/* Riga 2: nome (verde, leggermente più grande) · FREQ (giallo) */}
+          <text x="0" y="13" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontWeight: 700, letterSpacing: 0 }}>
+            <tspan style={{ fill: "#a3e635", fontSize: 7 }}>{shortName}</tspan>
+            <tspan style={{ fill: "#fbbf24", fontSize: 6 }}>·{freqAbbr(ac.freq)}</tspan>
           </text>
-          {/* Riga 3: SQK · ALT · stato (abbr) */}
-          <text x="0" y="28" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 7, fontWeight: 700 }}>
+          {/* Riga 3: SQK (azzurro) · QUOTA (bianco) · STATO (colore stato) */}
+          <text x="0" y="21" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 6, fontWeight: 700, letterSpacing: 0 }}>
             <tspan style={{ fill: isEmergency ? "#fca5a5" : "#7dd3fc" }}>{ac.squawk}</tspan>
-            <tspan style={{ fill: "#fbbf24" }}> · {ac.altitude}ft</tspan>
-            <tspan style={{ fill: status.color }}> · {status.abbr}</tspan>
+            <tspan style={{ fill: "#e2e8f0" }}>·{ac.altitude}ft</tspan>
+            <tspan style={{ fill: status.color }}>·{status.abbr}</tspan>
           </text>
         </g>
       </g>
 
-      {/* Hit area: copre aereo + etichetta */}
       <rect
         x={-HIT_R} y={-HIT_R}
         width={HIT_R * 2} height={HIT_R + labelY + LABEL_H}

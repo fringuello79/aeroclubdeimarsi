@@ -112,44 +112,50 @@ export function useSession() {
 
   // ============================================================
   // PTT LOCK — acquisizione atomica della linea radio
-  // Ritorna true se ho ottenuto la linea, false se occupata (e non sono istruttore)
+  // Ritorna true se ho EFFETTIVAMENTE ottenuto la linea (verificato dallo
+  // snapshot finale della transazione), false se occupata.
   // L'istruttore fa OVERRIDE: prende la linea anche se occupata.
+  //
+  // NOTA TECNICA: la callback di runTransaction può essere eseguita più volte
+  // in caso di conflitto (è documentato Firebase). Per questo NON usiamo una
+  // variabile locale "acquired" settata dentro la callback (era il bug della
+  // versione precedente: poteva sopravvivere tra retry e falsare il risultato).
+  // Verifichiamo invece sullo snapshot finale chi è davvero activeTransmitter.
   // ============================================================
   const acquirePTT = async (name, color, isInstr) => {
     const pttRef = ref(db, `sessions/${SESSION_ID}/ptt`);
-    let acquired = false;
     try {
-      await runTransaction(pttRef, (current) => {
+      const result = await runTransaction(pttRef, (current) => {
         const active = current?.activeTransmitter ?? null;
         // Linea libera → la prendo
         if (active === null || active === undefined) {
-          acquired = true;
           return { activeTransmitter: uid, activeName: name, activeColor: color, isInstructor: !!isInstr, startedAt: Date.now() };
         }
         // Sono già io → mantengo (re-press difensivo)
         if (active === uid) {
-          acquired = true;
           return current;
         }
-        // Occupata da altri: se sono istruttore faccio override, altrimenti rifiuto
+        // Occupata da altri: solo l'istruttore può fare override
         if (isInstr) {
-          acquired = true;
           return { activeTransmitter: uid, activeName: name, activeColor: color, isInstructor: true, startedAt: Date.now() };
         }
-        acquired = false;
-        return; // abort: nessuna modifica
+        // Pilota su linea occupata → abort
+        return; // undefined = aborta la transazione
       });
+      // VERITÀ ASSOLUTA: leggo lo snapshot post-transazione.
+      // committed=true e activeTransmitter==uid → il lock è davvero mio.
+      const finalSnap = result.snapshot.val();
+      const acquired = !!result.committed && finalSnap && finalSnap.activeTransmitter === uid;
+      if (acquired) {
+        try {
+          await onDisconnect(pttRef).set({ activeTransmitter: null, activeName: null, activeColor: null, isInstructor: false });
+        } catch (e) { /* non bloccante */ }
+      }
+      return acquired;
     } catch (e) {
       console.error("acquirePTT error", e);
-      acquired = false;
+      return false;
     }
-    // Se ho preso la linea, predispongo il rilascio automatico in caso di disconnessione
-    if (acquired) {
-      try {
-        await onDisconnect(pttRef).set({ activeTransmitter: null, activeName: null, activeColor: null, isInstructor: false });
-      } catch (e) { /* non bloccante */ }
-    }
-    return acquired;
   };
 
   // Rilascio la linea SOLO se l'attivo sono io (non rubo il rilascio a un altro)

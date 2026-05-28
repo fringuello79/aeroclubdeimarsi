@@ -119,13 +119,16 @@ function LIBPBackground() {
       <text x={870} y={492} dominantBaseline="central" transform="rotate(50 870 492)" className="mono" style={{ fill: "#facc15", fontSize: 17, fontWeight: 700 }}>F</text>
 
       {/* PISTA 04/22 */}
-      <rect x="70" y="195" width="860" height="50" fill="#1f2937" stroke="#374151" strokeWidth="1" />
-      <line x1="85" y1="220" x2="915" y2="220" stroke="#fff" strokeWidth="2" strokeDasharray="20 16" opacity="0.9" />
+      <rect x="70" y="195" width="860" height="50" fill="#1a2a3a" stroke="#2c4e70" strokeWidth="1" />
+      {/* Soglie azzurre stile MFD */}
+      <rect x="70" y="195" width="5" height="50" fill="#5ac8f5" opacity="0.85" />
+      <rect x="925" y="195" width="5" height="50" fill="#5ac8f5" opacity="0.85" />
+      <line x1="85" y1="220" x2="915" y2="220" stroke="#fff" strokeWidth="1.8" strokeDasharray="20 16" opacity="0.85" />
       {[0, 1, 2, 3, 4].map((i) => (
-        <line key={`t04-${i}`} x1={73} y1={200 + i * 11} x2={87} y2={200 + i * 11} stroke="#fff" strokeWidth="2.5" />
+        <line key={`t04-${i}`} x1={78} y1={200 + i * 11} x2={92} y2={200 + i * 11} stroke="#fff" strokeWidth="2.5" />
       ))}
       {[0, 1, 2, 3, 4].map((i) => (
-        <line key={`t22-${i}`} x1={913} y1={200 + i * 11} x2={927} y2={200 + i * 11} stroke="#fff" strokeWidth="2.5" />
+        <line key={`t22-${i}`} x1={908} y1={200 + i * 11} x2={922} y2={200 + i * 11} stroke="#fff" strokeWidth="2.5" />
       ))}
       {/* Numeri pista PERPENDICOLARI (leggibili da chi atterra) */}
       <text x={115} y={220} textAnchor="middle" dominantBaseline="central" transform="rotate(90 115 220)" className="mono" style={{ fill: "#fff", fontSize: 28, fontWeight: 900, letterSpacing: 2 }}>04</text>
@@ -214,13 +217,16 @@ function LIAHBackground() {
       <rect x="490" y="240" width="20" height="75" fill="#5a4815" />
       <line x1="500" y1="245" x2="500" y2="310" stroke="#facc15" strokeWidth="1.2" strokeDasharray="5 4" />
 
-      <rect x="100" y="195" width="800" height="40" fill="#1f2937" stroke="#374151" strokeWidth="1" />
-      <line x1="115" y1="215" x2="885" y2="215" stroke="#fff" strokeWidth="2" strokeDasharray="20 16" opacity="0.9" />
+      <rect x="100" y="195" width="800" height="40" fill="#1a2a3a" stroke="#2c4e70" strokeWidth="1" />
+      {/* Soglie azzurre stile MFD */}
+      <rect x="100" y="195" width="5" height="40" fill="#5ac8f5" opacity="0.85" />
+      <rect x="895" y="195" width="5" height="40" fill="#5ac8f5" opacity="0.85" />
+      <line x1="115" y1="215" x2="885" y2="215" stroke="#fff" strokeWidth="1.8" strokeDasharray="20 16" opacity="0.85" />
       {[0, 1, 2, 3, 4].map((i) => (
-        <line key={`t08-${i}`} x1={103} y1={199 + i * 9} x2={117} y2={199 + i * 9} stroke="#fff" strokeWidth="2.5" />
+        <line key={`t08-${i}`} x1={108} y1={199 + i * 9} x2={122} y2={199 + i * 9} stroke="#fff" strokeWidth="2.5" />
       ))}
       {[0, 1, 2, 3, 4].map((i) => (
-        <line key={`t26-${i}`} x1={883} y1={199 + i * 9} x2={897} y2={199 + i * 9} stroke="#fff" strokeWidth="2.5" />
+        <line key={`t26-${i}`} x1={878} y1={199 + i * 9} x2={892} y2={199 + i * 9} stroke="#fff" strokeWidth="2.5" />
       ))}
       <text x={145} y={215} textAnchor="middle" dominantBaseline="central" transform="rotate(90 145 215)" className="mono" style={{ fill: "#fff", fontSize: 26, fontWeight: 900, letterSpacing: 2 }}>08</text>
       <text x={855} y={215} textAnchor="middle" dominantBaseline="central" transform="rotate(-90 855 215)" className="mono" style={{ fill: "#fff", fontSize: 26, fontWeight: 900, letterSpacing: 2 }}>26</text>
@@ -414,15 +420,15 @@ export function GeographicBackground() {
       {/* MARE ADRIATICO — area a EST della costa */}
       <path
         d={`${COAST} L 5500 2480 L 5500 200 Z`}
-        fill="#0a2540" opacity="0.55"
+        fill="#08283e" opacity="0.6"
       />
       {/* Linea di costa */}
-      <path d={COAST} fill="none" stroke="#5fa8d3" strokeWidth="2.2" opacity="0.85" />
+      <path d={COAST} fill="none" stroke="#5fa8d3" strokeWidth="2" opacity="0.9" />
 
       <text x="4950" y="1300" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: "#7aaed4", fontSize: 22, fontWeight: 700, letterSpacing: 8, opacity: 0.5 }} transform="rotate(80 4950 1300)">MARE ADRIATICO</text>
 
       {/* Sagoma Abruzzo — leggero riempimento per dare profondità */}
-      <path d={ABRUZZO_SHAPE} fill="#0d1e2f" stroke="#1a3a52" strokeWidth="1.4" opacity="0.55" />
+      <path d={ABRUZZO_SHAPE} fill="#0d1e2f" stroke="#1a3a52" strokeWidth="1.2" opacity="0.55" />
 
       {/* Confine regionale interno (Marche-Lazio-Molise) tratteggiato */}
       <path
@@ -456,16 +462,17 @@ export function GeographicBackground() {
       <text x="2700" y="3170" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: "#5d7896", fontSize: 17, fontWeight: 700, letterSpacing: 8, opacity: 0.5 }}>MOLISE</text>
       <text x="2700" y="1850" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: "#a3b8d0", fontSize: 32, fontWeight: 700, letterSpacing: 14, opacity: 0.16 }}>ABRUZZO</text>
 
-      {/* Punti di riporto VFR */}
+      {/* Punti di riporto VFR (stile waypoint MFD) */}
       {REPORTING_POINTS.map((p) => (
         <g key={p.id}>
           <polygon
-            points={`${p.x},${p.y - 9} ${p.x - 8},${p.y + 5} ${p.x + 8},${p.y + 5}`}
-            fill="rgba(196,181,253,0.9)"
+            points={`${p.x},${p.y - 8} ${p.x - 7},${p.y + 5} ${p.x + 7},${p.y + 5}`}
+            fill="rgba(196,181,253,0.85)"
             stroke="#0b1b2b"
-            strokeWidth="1"
+            strokeWidth="0.8"
           />
-          <text x={p.x + 12} y={p.y + 3} dominantBaseline="central" className="mono" style={{ fill: "#c4b5fd", fontSize: 13, fontWeight: 700, letterSpacing: 0.8 }}>
+          <circle cx={p.x} cy={p.y - 1} r="1.5" fill="#0b1b2b" />
+          <text x={p.x + 11} y={p.y + 3} dominantBaseline="central" className="mono" style={{ fill: "#c4b5fd", fontSize: 13, fontWeight: 700, letterSpacing: 0.6 }}>
             {p.name}
           </text>
         </g>

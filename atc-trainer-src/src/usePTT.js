@@ -250,11 +250,21 @@ export function usePTT({ uid, enabled, displayName, color, isInstructor }) {
     setIsTransmitting(false);
   }, []);
 
+  // Kill-switch: chiude il microfono IMMEDIATAMENTE, senza setState,
+  // per usi di emergenza (override istruttore, lock perso, ecc.)
+  const forceMute = useCallback(() => {
+    if (localTrackRef.current && localTrackRef.current.enabled) {
+      localTrackRef.current.enabled = false;
+    }
+    setIsTransmitting(false);
+  }, []);
+
   return {
     voiceReady,
     micDenied,
     isTransmitting,
     startTransmit,
     stopTransmit,
+    forceMute,
   };
 }

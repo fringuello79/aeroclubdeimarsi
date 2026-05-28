@@ -8,7 +8,7 @@ import {
 } from "./airports";
 
 // Versione applicazione
-const APP_VERSION = "v1.8 · 28/05/2026";
+const APP_VERSION = "v1.9b · 28/05/2026";
 
 const STATUSES = [
   { value: "PARKED",   label: "Parked",        abbr: "PK", color: "#94a3b8" },
@@ -29,6 +29,42 @@ const SPECIAL_SQUAWKS = {
 };
 
 const PALETTE = ["#fbbf24","#60a5fa","#34d399","#f472b6","#a78bfa","#22d3ee","#fb7185","#84cc16"];
+
+// ============================================================
+// TEMA "avionica moderna" v1.9 — palette centralizzata
+// Ispirato ai display G1000/G3000 e ai radar ATC contemporanei
+// ============================================================
+const T = {
+  // sfondi
+  bg:        "#061018",        // sfondo principale mappa
+  bgPanel:   "#0d1622",        // pannelli sidebar
+  bgInset:   "#08111c",        // sfondi interni (campi, righe)
+  bgHeader:  "rgba(8,18,30,0.92)",
+  // bordi
+  border:    "#1e3148",        // bordo standard
+  borderHi:  "#2c5478",        // bordo enfasi
+  borderDim: "#142030",        // bordo sottilissimo
+  // testo
+  text:      "#d4e5f7",        // testo principale
+  textDim:   "#94a3b8",
+  textLow:   "#5d7896",
+  // accent avionica
+  cyan:      "#5ac8f5",        // accent primario (selezione, info)
+  cyanSoft:  "#7dd3fc",
+  amber:     "#fbbf24",        // identità (TU, frequenza), giallo PESCARA
+  amberSoft: "#fde68a",
+  green:     "#22c55e",        // trasmette / OK
+  greenSoft: "#86efac",
+  red:       "#ef4444",        // emergenza
+  redSoft:   "#fca5a5",
+  magenta:   "#f472b6",
+  // status pista/route
+  sea:       "#08283e",
+  seaLine:   "#5fa8d3",
+  rwy:       "#1a2a3a",
+  rwyLine:   "#4d6985",
+  rwyThresh: "#5ac8f5",
+};
 
 const PRESETS = [
   { callsign: "I-6195", type: "P96 Golf" },
@@ -143,19 +179,30 @@ export default function App() {
 
   // Se mentre trasmetto l'istruttore fa override, il lock non è più mio:
   // chiudo il mio microfono e mostro l'avviso.
+  // ESTESO v1.9b: copre anche la race condition in cui due piloti acquisiscono
+  // simultaneamente. Firebase risolve a uno solo, l'altro deve mutarsi subito
+  // anche se ha già abilitato il mic localmente.
   useEffect(() => {
     if (!me) return;
     const active = pttState.activeTransmitter;
+    // Caso 1: stavo tenendo premuto, il lock è cambiato a un altro
     if (pttHeldRef.current && active && active !== uid) {
-      // Sono stato soppiantato
       pttHeldRef.current = false;
       if (pttTimeoutRef.current) { clearTimeout(pttTimeoutRef.current); pttTimeoutRef.current = null; }
-      voice.stopTransmit();
+      voice.forceMute();
       if (!wasOverriddenRef.current) {
         wasOverriddenRef.current = true;
         setPttToast(`Interrotto da ${pttState.activeName || "istruttore"}`);
         setTimeout(() => setPttToast(null), 2500);
       }
+      return;
+    }
+    // Caso 2 (race): il mio mic è attivo ma il lock non è mio (o è null).
+    // Significa che ho perso la transazione: mute immediato senza toast.
+    if (voice.isTransmitting && active !== uid) {
+      voice.forceMute();
+      pttHeldRef.current = false;
+      if (pttTimeoutRef.current) { clearTimeout(pttTimeoutRef.current); pttTimeoutRef.current = null; }
     }
   }, [pttState, uid, me, voice]);
 
@@ -1181,7 +1228,10 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, transmi
   const handleR = 26;
   const HIT_R = touchMode ? 40 : 30;
 
-  // Targhetta ULTRA-compatta: 3 righe ravvicinate
+  // NPC commercial (B737/A320) → silhouette più grande per distinguerli a colpo d'occhio
+  const isCommercial = ac.ownerRole === "npc" && (String(ac.type || "").match(/B7|A3|A2|MD/i));
+  const scale = isCommercial ? 1.25 : 1.0;
+
   const LABEL_W = 66;
   const LABEL_H = 28;
   const labelY = 22;
@@ -1191,44 +1241,57 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, transmi
 
   return (
     <g transform={`translate(${ac.x} ${ac.y})`} data-aircraft={ac.id}>
-      {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
+      {isEmergency && <circle r="26" fill="none" stroke={T.red} strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
 
-      {/* Onde radio quando l'utente di questo aereo sta trasmettendo */}
+      {/* Onde radio quando l'utente di questo aereo sta trasmettendo (verde MFD) */}
       {transmitting && (
         <g style={{ pointerEvents: "none" }}>
-          <circle r="20" fill="none" stroke={ac.color} strokeWidth="2.5" style={{ animation: "ptt-wave 1.2s ease-out infinite" }} />
-          <circle r="20" fill="none" stroke={ac.color} strokeWidth="2" style={{ animation: "ptt-wave 1.2s ease-out infinite", animationDelay: "0.6s" }} />
+          <circle r="18" fill="none" stroke={T.green} strokeWidth="2" opacity="0.7" style={{ animation: "ptt-wave 1.2s ease-out infinite" }} />
+          <circle r="18" fill="none" stroke={T.green} strokeWidth="1.5" opacity="0.5" style={{ animation: "ptt-wave 1.2s ease-out infinite", animationDelay: "0.6s" }} />
         </g>
       )}
 
       <g style={{ pointerEvents: "none" }}>
-        {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.85" />}
-        {selected && !controllable && <circle r={handleR} fill="none" stroke="#fca5a5" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.7" />}
+        {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.2" strokeDasharray="3 2.5" opacity="0.85" />}
+        {selected && !controllable && <circle r={handleR} fill="none" stroke={T.redSoft} strokeWidth="1.2" strokeDasharray="3 2.5" opacity="0.7" />}
 
-        <g transform={`rotate(${ac.heading})`}>
-          <path d="M 0 -13 L 2 -8 L 2 0 L 13 5 L 13 7 L 2 5 L 2 9 L 6 13 L 6 14 L 0 13 L -6 14 L -6 13 L -2 9 L -2 5 L -13 7 L -13 5 L -2 0 L -2 -8 Z" fill={ac.color} stroke="#0b1b2b" strokeWidth="1" strokeLinejoin="round" opacity={controllable ? 1 : 0.8} />
+        <g transform={`rotate(${ac.heading}) scale(${scale})`}>
+          <path
+            d="M 0 -13 L 1.6 -8 L 1.6 -1 L 13 4 L 13 6 L 1.6 5 L 1.6 9 L 5 13 L 5 14 L 0 13 L -5 14 L -5 13 L -1.6 9 L -1.6 5 L -13 6 L -13 4 L -1.6 -1 L -1.6 -8 Z"
+            fill={ac.color}
+            stroke="#0b1b2b" strokeWidth="0.8" strokeLinejoin="round"
+            opacity={controllable ? 1 : 0.85}
+          />
+          {/* Linea ala accennata (highlight chiaro) */}
+          <line x1="-12" y1="5" x2="12" y2="5" stroke="rgba(255,255,255,0.35)" strokeWidth="0.4" />
         </g>
 
+        {/* Indicatore "TU": pill arrotondata invece di cerchio */}
         {isMine && (
-          <g transform="translate(-16 -16)">
-            <circle r="7" fill="#fbbf24" stroke="#0b1b2b" strokeWidth="1.2" />
-            <text textAnchor="middle" y="3" className="mono" style={{ fill: "#0b1b2b", fontSize: 8, fontWeight: 900 }}>TU</text>
+          <g transform="translate(-14 -14)">
+            <rect x="-8" y="-5.5" width="16" height="11" rx="3" fill={T.amber} stroke="#0b1b2b" strokeWidth="0.8" />
+            <text textAnchor="middle" y="3" className="mono" style={{ fill: "#1a1a1a", fontSize: 7.5, fontWeight: 900, letterSpacing: 0.5 }}>TU</text>
+          </g>
+        )}
+
+        {/* Cerchio mic verde quando l'aereo sta trasmettendo (in alto a destra) */}
+        {transmitting && (
+          <g transform="translate(14 -14)">
+            <circle r="6.5" fill={T.green} stroke="#0b1b2b" strokeWidth="0.8" />
+            <text textAnchor="middle" y="2.5" className="mono" style={{ fill: "#0b1b2b", fontSize: 8, fontWeight: 900 }}>●</text>
           </g>
         )}
 
         {/* Targhetta ultra-compatta: marche / nome·FREQ / SQK·ALT·ST */}
         <g transform={`translate(0 ${labelY})`}>
-          <rect x={-LABEL_W/2} y={-2} width={LABEL_W} height={LABEL_H} rx="2" fill="rgba(3,10,20,0.62)" stroke={selected ? ac.color : (isEmergency ? "#ef4444" : "#2d5980")} strokeWidth="0.8" />
-          {/* Riga 1: Marche */}
+          <rect x={-LABEL_W/2} y={-2} width={LABEL_W} height={LABEL_H} rx="3" fill="rgba(8,16,28,0.85)" stroke={transmitting ? T.green : (selected ? ac.color : (isEmergency ? T.red : T.border))} strokeWidth="0.7" />
           <text x="0" y="5" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fill: ac.color, fontSize: 8, fontWeight: 700, letterSpacing: 0.4 }}>{ac.callsign}</text>
-          {/* Riga 2: nome (verde, leggermente più grande) · FREQ (giallo) */}
           <text x="0" y="13" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontWeight: 700, letterSpacing: 0 }}>
-            <tspan style={{ fill: "#a3e635", fontSize: 7 }}>{shortName}</tspan>
-            <tspan style={{ fill: "#fbbf24", fontSize: 6 }}>·{freqAbbr(ac.freq)}</tspan>
+            <tspan style={{ fill: T.greenSoft, fontSize: 7 }}>{shortName}</tspan>
+            <tspan style={{ fill: T.amber, fontSize: 6 }}>·{freqAbbr(ac.freq)}</tspan>
           </text>
-          {/* Riga 3: SQK (azzurro) · QUOTA (bianco) · STATO (colore stato) */}
           <text x="0" y="21" textAnchor="middle" dominantBaseline="central" className="mono" style={{ fontSize: 6, fontWeight: 700, letterSpacing: 0 }}>
-            <tspan style={{ fill: isEmergency ? "#fca5a5" : "#7dd3fc" }}>{ac.squawk}</tspan>
+            <tspan style={{ fill: isEmergency ? T.redSoft : T.cyanSoft }}>{ac.squawk}</tspan>
             <tspan style={{ fill: "#e2e8f0" }}>·{ac.altitude}ft</tspan>
             <tspan style={{ fill: status.color }}>·{status.abbr}</tspan>
           </text>

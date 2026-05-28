@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "./useSession";
+import { usePTT } from "./usePTT";
 import {
   AIRPORTS, AIRPORT_OPTIONS, WORLD, WORLD_FOCUS,
   REPORTING_POINTS, COMMON_FREQS, GeographicBackground, WindIndicator,
@@ -7,7 +8,7 @@ import {
 } from "./airports";
 
 // Versione applicazione
-const APP_VERSION = "v1.7 · 26/05/2026";
+const APP_VERSION = "v1.8 · 28/05/2026";
 
 const STATUSES = [
   { value: "PARKED",   label: "Parked",        abbr: "PK", color: "#94a3b8" },
@@ -55,9 +56,10 @@ const detectTouchDevice = () => {
 
 export default function App() {
   const {
-    uid, aircraft, airport, wind,
+    uid, aircraft, airport, wind, pttState,
     upsertAircraft, patchAircraft, deleteAircraft, setupDisconnect,
     setAirport, resetAllTraffic, setWind,
+    acquirePTT, releasePTT,
   } = useSession();
 
   const [me, setMe] = useState(null);
@@ -75,6 +77,115 @@ export default function App() {
 
   // Mantengo viewBoxRef sincronizzato con lo state per leggerlo dentro touch handlers
   useEffect(() => { viewBoxRef.current = viewBox; }, [viewBox]);
+
+  // ============================================================
+  // PTT AUDIO (WebRTC mesh) — attivo solo dopo il join (me != null)
+  // ============================================================
+  const myColorForPtt = aircraft.find(a => a.ownerId === me?.userId)?.color || "#7dd3fc";
+  const voice = usePTT({
+    uid,
+    enabled: !!me,
+    displayName: me?.name,
+    color: myColorForPtt,
+    isInstructor,
+  });
+
+  const pttHeldRef = useRef(false);       // sto tenendo premuto il PTT?
+  const pttTimeoutRef = useRef(null);     // timeout di sicurezza 30s
+  const wasOverriddenRef = useRef(false); // sono stato interrotto dall'istruttore?
+  const [pttToast, setPttToast] = useState(null); // avviso temporaneo (es. "interrotto")
+
+  // Beep "occupato" — generato a runtime, niente file esterni
+  const beepOccupied = useCallback(() => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 440;
+      gain.gain.value = 0.12;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+      osc.onended = () => { try { ctx.close(); } catch (e) {} };
+    } catch (e) { /* silenzioso */ }
+  }, []);
+
+  // Inizio trasmissione: prima acquisisco il lock, poi apro il microfono
+  const handlePttDown = useCallback(async () => {
+    if (!me || pttHeldRef.current) return;
+    if (voice.micDenied) { beepOccupied(); return; }
+    pttHeldRef.current = true;
+    const ok = await acquirePTT(me.name, myColorForPtt, isInstructor);
+    if (!ok) {
+      // Linea occupata e non sono istruttore → beep e annullo
+      pttHeldRef.current = false;
+      beepOccupied();
+      return;
+    }
+    wasOverriddenRef.current = false;
+    voice.startTransmit();
+    // Timeout di sicurezza: rilascio d'ufficio dopo 30s di trasmissione continua
+    if (pttTimeoutRef.current) clearTimeout(pttTimeoutRef.current);
+    pttTimeoutRef.current = setTimeout(() => { handlePttUp(); }, 30000);
+  }, [me, voice, acquirePTT, myColorForPtt, isInstructor, beepOccupied]);
+
+  // Fine trasmissione: chiudo microfono e rilascio il lock
+  const handlePttUp = useCallback(async () => {
+    if (!pttHeldRef.current) return;
+    pttHeldRef.current = false;
+    if (pttTimeoutRef.current) { clearTimeout(pttTimeoutRef.current); pttTimeoutRef.current = null; }
+    voice.stopTransmit();
+    await releasePTT();
+  }, [voice, releasePTT]);
+
+  // Se mentre trasmetto l'istruttore fa override, il lock non è più mio:
+  // chiudo il mio microfono e mostro l'avviso.
+  useEffect(() => {
+    if (!me) return;
+    const active = pttState.activeTransmitter;
+    if (pttHeldRef.current && active && active !== uid) {
+      // Sono stato soppiantato
+      pttHeldRef.current = false;
+      if (pttTimeoutRef.current) { clearTimeout(pttTimeoutRef.current); pttTimeoutRef.current = null; }
+      voice.stopTransmit();
+      if (!wasOverriddenRef.current) {
+        wasOverriddenRef.current = true;
+        setPttToast(`Interrotto da ${pttState.activeName || "istruttore"}`);
+        setTimeout(() => setPttToast(null), 2500);
+      }
+    }
+  }, [pttState, uid, me, voice]);
+
+  // Barra spaziatrice = PTT su desktop (ignoro se sto scrivendo in un input)
+  useEffect(() => {
+    if (!me || touchMode) return;
+    const isTyping = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    const onKeyDown = (e) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      if (isTyping(document.activeElement)) return;
+      e.preventDefault();
+      if (!e.repeat) handlePttDown();
+    };
+    const onKeyUp = (e) => {
+      if (e.code !== "Space" && e.key !== " ") return;
+      if (isTyping(document.activeElement)) return;
+      e.preventDefault();
+      handlePttUp();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [me, touchMode, handlePttDown, handlePttUp]);
+
+  // Stato visivo del PTT: libero / trasmetto io / occupato da altri
+  const pttBusyByOther = pttState.activeTransmitter && pttState.activeTransmitter !== uid;
+  const pttStatus = voice.isTransmitting ? "TX" : (pttBusyByOther ? "BUSY" : "FREE");
 
   const apData = AIRPORTS[airport] || null;
   const viewLabel = apData
@@ -98,6 +209,17 @@ export default function App() {
       setViewBox({ x: fb.x, y: fb.y, w: fb.w, h: fb.h });
     }
   }, [airport]);
+
+  // Sicurezza mobile: se un PILOTA su touch ha la selezione su un aereo non suo
+  // (per qualunque ragione), la riporto automaticamente sul proprio aereo.
+  useEffect(() => {
+    if (!me || isInstructor || !touchMode) return;
+    if (!selectedId) return;
+    const sel = aircraft.find(a => a.id === selectedId);
+    if (sel && sel.ownerId !== me.userId) {
+      setSelectedId(me.planeId);
+    }
+  }, [selectedId, aircraft, me, isInstructor, touchMode]);
 
   const toSvg = useCallback((cx, cy) => {
     const svg = svgRef.current; if (!svg) return { x: 0, y: 0 };
@@ -329,6 +451,12 @@ export default function App() {
   const onPlaneDown = (e, ac) => {
     if (isPinchingRef.current) return;
     e.stopPropagation();
+    // Fix mobile: in modalità touch un PILOTA può selezionare SOLO il proprio aereo.
+    // Evita che gli allievi tocchino per sbaglio l'aereo di un altro e poi non riescano
+    // più a muovere il proprio. L'istruttore mantiene piena libertà di selezione.
+    if (touchMode && !isInstructor && ac.ownerId !== me.userId) {
+      return; // ignora il tap su aerei altrui: la selezione resta sul proprio
+    }
     setSelectedId(ac.id);
     if (!canControl(ac)) return;
     if (touchMode) return; // In modalità touch nessun drag: solo seleziona
@@ -448,6 +576,7 @@ export default function App() {
     <div className="app-root">
       <style>{`
         @keyframes pulse-emergency { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
+        @keyframes ptt-wave { 0%{opacity:0.9;transform:scale(0.7)} 100%{opacity:0;transform:scale(2.2)} }
         .grain { background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 3px 3px; }
         .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
         html, body, #root { margin: 0; padding: 0; height: 100%; width: 100%; }
@@ -637,6 +766,7 @@ export default function App() {
                 isMine={ac.ownerId === me.userId}
                 controllable={canControl(ac)}
                 touchMode={touchMode}
+                transmitting={!!pttState.activeTransmitter && ac.ownerId === pttState.activeTransmitter}
                 onPointerDown={(e) => onPlaneDown(e, ac)}
                 onRotateDown={(e) => onRotateDown(e, ac)}
               />
@@ -650,12 +780,30 @@ export default function App() {
           <div className="mono" style={{ position: "absolute", bottom: 8, right: 8, fontSize: 10, padding: "4px 8px", borderRadius: 4, background: "rgba(3,10,20,0.85)", color: "#94a3b8", border: "1px solid #2d5980", fontWeight: 600, letterSpacing: 0.5 }}>
             {APP_VERSION}
           </div>
+
+          {/* Avviso temporaneo (es. interruzione da istruttore) */}
+          {pttToast && (
+            <div className="mono" style={{ position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", fontSize: 12, padding: "7px 14px", borderRadius: 5, background: "rgba(127,29,29,0.92)", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 700, zIndex: 30, letterSpacing: 0.5, pointerEvents: "none" }}>
+              📻 {pttToast}
+            </div>
+          )}
+
+          {/* PTT — pulsante radio */}
+          <PTTButton
+            status={pttStatus}
+            touchMode={touchMode}
+            micDenied={voice.micDenied}
+            activeName={pttState.activeName}
+            isMineActive={pttState.activeTransmitter === uid}
+            onDown={handlePttDown}
+            onUp={handlePttUp}
+          />
         </div>
 
         <aside className="sidebar">
           {/* ISTRUTTORE: StripBoard in cima (con nomi piloti incorporati) */}
           {isInstructor && aircraft.length > 0 && (
-            <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} />
+            <InstructorStripBoard aircraft={aircraft} selectedId={selectedId} onSelect={setSelectedId} activeTransmitter={pttState.activeTransmitter} />
           )}
           {/* ISTRUTTORE senza traffico: messaggio segnaposto */}
           {isInstructor && aircraft.length === 0 && (
@@ -666,7 +814,20 @@ export default function App() {
 
           {/* PILOTA: lista presenti compatta */}
           {!isInstructor && (
-            <PresentiPanel people={people} myUid={me.userId} selectedId={selectedId} onSelect={(id) => setSelectedId(id)} />
+            <PresentiPanel
+              people={people}
+              myUid={me.userId}
+              selectedId={selectedId}
+              activeTransmitter={pttState.activeTransmitter}
+              onSelect={(id) => {
+                // Coerente col fix mappa: su mobile il pilota può riselezionare solo il proprio aereo
+                if (touchMode) {
+                  const target = aircraft.find(a => a.id === id);
+                  if (target && target.ownerId !== me.userId) return;
+                }
+                setSelectedId(id);
+              }}
+            />
           )}
 
           {isInstructor && (
@@ -762,6 +923,80 @@ function JoinScreen({ onJoin, ready }) {
   );
 }
 
+function PTTButton({ status, touchMode, micDenied, activeName, isMineActive, onDown, onUp }) {
+  // status: "TX" (trasmetto io) | "BUSY" (occupato da altri) | "FREE" (libero)
+  const colors = {
+    TX:   { bg: "#dc2626", border: "#ef4444", text: "#fff",     led: "#fca5a5", label: "IN TRASMISSIONE" },
+    BUSY: { bg: "rgba(120,53,15,0.85)", border: "#f59e0b", text: "#fde68a", led: "#fbbf24", label: activeName ? `📻 ${activeName}` : "OCCUPATO" },
+    FREE: { bg: "rgba(7,18,30,0.85)", border: "#16a34a", text: "#86efac", led: "#22c55e", label: touchMode ? "TIENI PER PARLARE" : "SPAZIO per parlare" },
+  };
+  const c = colors[status] || colors.FREE;
+
+  // Handler che funzionano sia mouse che touch
+  const downProps = {
+    onMouseDown: (e) => { if (!touchMode) { e.preventDefault(); onDown(); } },
+    onMouseUp:   (e) => { if (!touchMode) { e.preventDefault(); onUp(); } },
+    onMouseLeave:(e) => { if (!touchMode) { onUp(); } },
+    onTouchStart:(e) => { e.preventDefault(); onDown(); },
+    onTouchEnd:  (e) => { e.preventDefault(); onUp(); },
+    onTouchCancel:(e) => { onUp(); },
+  };
+
+  if (micDenied) {
+    return (
+      <div className="mono" style={{ position: "absolute", bottom: touchMode ? 70 : 44, left: "50%", transform: "translateX(-50%)", fontSize: 11, padding: "8px 14px", borderRadius: 6, background: "rgba(127,29,29,0.9)", color: "#fecaca", border: "1px solid #ef4444", fontWeight: 600, zIndex: 25, textAlign: "center", maxWidth: "80%" }}>
+        🎤 Microfono non disponibile — puoi solo ascoltare
+      </div>
+    );
+  }
+
+  if (touchMode) {
+    // Mobile: grande bottone circolare, basso-centro, semitrasparente a riposo
+    return (
+      <button
+        {...downProps}
+        className="mono"
+        style={{
+          position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          width: 96, height: 96, borderRadius: "50%",
+          background: c.bg, border: `3px solid ${c.border}`, color: c.text,
+          fontSize: 11, fontWeight: 800, letterSpacing: 0.5, zIndex: 25,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+          touchAction: "none", userSelect: "none", WebkitUserSelect: "none",
+          opacity: status === "FREE" ? 0.82 : 1,
+          boxShadow: status === "TX" ? "0 0 22px rgba(239,68,68,0.7)" : "0 4px 14px rgba(0,0,0,0.5)",
+        }}
+      >
+        <span style={{ width: 14, height: 14, borderRadius: "50%", background: c.led, boxShadow: `0 0 8px ${c.led}` }} />
+        <span style={{ fontSize: 9, lineHeight: 1.1, textAlign: "center", padding: "0 4px" }}>
+          {status === "BUSY" && !isMineActive ? (activeName || "OCCUPATO") : status === "TX" ? "PARLA" : "PTT"}
+        </span>
+      </button>
+    );
+  }
+
+  // Desktop: barra di stato in basso, il PTT vero è la barra spaziatrice
+  return (
+    <div
+      {...downProps}
+      className="mono"
+      style={{
+        position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)",
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "8px 16px", borderRadius: 6,
+        background: c.bg, border: `2px solid ${c.border}`, color: c.text,
+        fontSize: 12, fontWeight: 700, letterSpacing: 1, zIndex: 25,
+        cursor: "pointer", userSelect: "none",
+        boxShadow: status === "TX" ? "0 0 18px rgba(239,68,68,0.6)" : "0 3px 10px rgba(0,0,0,0.4)",
+      }}
+      title="Tieni premuta la BARRA SPAZIATRICE per trasmettere"
+    >
+      <span style={{ width: 13, height: 13, borderRadius: "50%", background: c.led, boxShadow: `0 0 8px ${c.led}`, flexShrink: 0 }} />
+      <span>{c.label}</span>
+    </div>
+  );
+}
+
 function ModeToggle({ isInstructor, setIsInstructor }) {
   return (
     <div className="mono" style={{ display: "flex", borderRadius: 4, overflow: "hidden", fontSize: 12, border: "1px solid #2d5980" }}>
@@ -830,7 +1065,7 @@ function WindControlPanel({ wind, setWind }) {
   );
 }
 
-function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
+function InstructorStripBoard({ aircraft, selectedId, onSelect, activeTransmitter }) {
   // Ordinamento: emergenze prima, poi in volo, poi a terra, poi parcheggiati
   const STATUS_RANK = { AIRBORNE: 0, FINAL: 1, DEPART: 2, LINEUP: 3, HOLDING: 4, TAXI: 5, STARTUP: 6, PARKED: 7 };
   const sorted = [...aircraft].sort((a, b) => {
@@ -854,6 +1089,7 @@ function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
         {sorted.map(ac => {
           const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
           const isSelected = ac.id === selectedId;
+          const isTx = activeTransmitter && ac.ownerId === activeTransmitter;
           const status = STATUSES.find(s => s.value === ac.status) || STATUSES[0];
           return (
             <div
@@ -867,14 +1103,18 @@ function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
                 padding: "6px 6px",
                 fontSize: 11,
                 borderRadius: 3, cursor: "pointer",
-                background: isEmergency
+                background: isTx
+                  ? "rgba(34,197,94,0.16)"
+                  : isEmergency
                   ? "rgba(239,68,68,0.12)"
                   : isSelected ? "rgba(255,255,255,0.06)" : "rgba(7,18,30,0.5)",
-                border: `1px solid ${isSelected ? ac.color : isEmergency ? "#ef4444" : "#2d5980"}`,
+                border: `1px solid ${isTx ? "#22c55e" : isSelected ? ac.color : isEmergency ? "#ef4444" : "#2d5980"}`,
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <span style={{ color: ac.color, fontWeight: 700, letterSpacing: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ac.callsign}</span>
+                <span style={{ color: ac.color, fontWeight: 700, letterSpacing: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {isTx && <span style={{ color: "#22c55e" }}>🎤 </span>}{ac.callsign}
+                </span>
                 <span style={{ color: "#94a3b8", fontWeight: 500, fontSize: 8, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: 0 }}>
                   {(ac.ownerName || (ac.ownerRole === "npc" ? "NPC" : "—")).slice(0, 10)}
                 </span>
@@ -891,7 +1131,7 @@ function InstructorStripBoard({ aircraft, selectedId, onSelect }) {
   );
 }
 
-function PresentiPanel({ people, myUid, selectedId, onSelect }) {
+function PresentiPanel({ people, myUid, selectedId, onSelect, activeTransmitter }) {
   return (
     <PanelBox title={`Presenti (${people.length})`}>
       {people.length === 0 && (
@@ -901,6 +1141,7 @@ function PresentiPanel({ people, myUid, selectedId, onSelect }) {
         {people.map((p) => {
           const isMine = p.ownerId === myUid;
           const isSelected = p.id === selectedId;
+          const isTx = activeTransmitter && p.ownerId === activeTransmitter;
           return (
             <div
               key={p.id}
@@ -908,16 +1149,19 @@ function PresentiPanel({ people, myUid, selectedId, onSelect }) {
               style={{
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "8px 10px", borderRadius: 5, cursor: "pointer",
-                background: isMine
+                background: isTx
+                  ? "rgba(34,197,94,0.16)"
+                  : isMine
                   ? "rgba(251,191,36,0.12)"
                   : isSelected ? "rgba(255,255,255,0.05)" : "rgba(7,18,30,0.5)",
-                border: `1px solid ${isMine ? "#fbbf24" : isSelected ? p.color : "#2d5980"}`,
+                border: `1px solid ${isTx ? "#22c55e" : isMine ? "#fbbf24" : isSelected ? p.color : "#2d5980"}`,
               }}
             >
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: p.color, flexShrink: 0, border: "1px solid #0b1b2b" }} />
+              <div style={{ width: 12, height: 12, borderRadius: "50%", background: isTx ? "#22c55e" : p.color, flexShrink: 0, border: "1px solid #0b1b2b", boxShadow: isTx ? "0 0 8px #22c55e" : "none" }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span className="mono" style={{ color: p.color, fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>{p.callsign}</span>
+                  {isTx && <span className="mono" style={{ fontSize: 12 }}>🎤</span>}
                   {isMine && <span className="mono" style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#fbbf24", color: "#0b1b2b", fontWeight: 700, letterSpacing: 1 }}>TU</span>}
                   {p.ownerRole === "istruttore" && <span className="mono" style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "rgba(127,29,29,0.5)", color: "#fca5a5", fontWeight: 700, border: "1px solid #7f1d1d" }}>ISTR</span>}
                 </div>
@@ -931,7 +1175,7 @@ function PresentiPanel({ people, myUid, selectedId, onSelect }) {
   );
 }
 
-function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPointerDown, onRotateDown }) {
+function AircraftMarker({ ac, selected, isMine, controllable, touchMode, transmitting, onPointerDown, onRotateDown }) {
   const isEmergency = ["7500","7600","7700"].includes(ac.squawk);
   const status = STATUSES.find((s) => s.value === ac.status) || STATUSES[0];
   const handleR = 26;
@@ -948,6 +1192,14 @@ function AircraftMarker({ ac, selected, isMine, controllable, touchMode, onPoint
   return (
     <g transform={`translate(${ac.x} ${ac.y})`} data-aircraft={ac.id}>
       {isEmergency && <circle r="26" fill="none" stroke="#ef4444" strokeWidth="2.5" style={{ animation: "pulse-emergency 1.4s ease-in-out infinite", pointerEvents: "none" }} />}
+
+      {/* Onde radio quando l'utente di questo aereo sta trasmettendo */}
+      {transmitting && (
+        <g style={{ pointerEvents: "none" }}>
+          <circle r="20" fill="none" stroke={ac.color} strokeWidth="2.5" style={{ animation: "ptt-wave 1.2s ease-out infinite" }} />
+          <circle r="20" fill="none" stroke={ac.color} strokeWidth="2" style={{ animation: "ptt-wave 1.2s ease-out infinite", animationDelay: "0.6s" }} />
+        </g>
+      )}
 
       <g style={{ pointerEvents: "none" }}>
         {selected && controllable && <circle r={handleR} fill="none" stroke={ac.color} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.85" />}

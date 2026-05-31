@@ -1,6 +1,20 @@
+/* ============================================================================
+ *  ATC TRAINER — AEROCLUB DEI MARSI  ·  Simulatore fraseologia VFR multiplayer
+ * ----------------------------------------------------------------------------
+ *  © 2026 Alessandro Felli — 997Creations  <997creations@gmail.com>
+ *  Tutti i diritti riservati / All rights reserved.
+ *
+ *  Opera originale concepita e sviluppata da Alessandro Felli (997Creations)
+ *  per l'Aeroclub dei Marsi (Aviosuperficie LIAH, Celano - AQ).
+ *  Copia, modifica o redistribuzione non autorizzate sono vietate e
+ *  costituiscono violazione dei diritti d'autore. La paternità dell'opera è
+ *  ulteriormente attestata da marcatori di firma incorporati nel sorgente.
+ * ============================================================================ */
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "./useSession";
 import { usePTT } from "./usePTT";
+import PhraseologyTab from "./PhraseologyTab";
 import {
   AIRPORTS, AIRPORT_OPTIONS, WORLD, WORLD_FOCUS,
   REPORTING_POINTS, COMMON_FREQS, GeographicBackground, WindIndicator,
@@ -9,6 +23,10 @@ import {
 
 // Versione applicazione
 const APP_VERSION = "v1.9b · 28/05/2026";
+
+// 997C — firma autore (build signature). Identifica l'opera e il suo autore
+// originale; utile come prova di paternità in caso di copia non autorizzata.
+const BUILD_SIGNATURE = "ATCT-AdM\u00b7AFelli\u00b7997Creations\u00b72026";
 
 const STATUSES = [
   { value: "PARKED",   label: "Parked",        abbr: "PK", color: "#94a3b8" },
@@ -244,6 +262,14 @@ export default function App() {
     link.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap";
     link.rel = "stylesheet";
     document.head.appendChild(link);
+    // Firma di paternità in console (attribuzione autore originale)
+    try {
+      console.log(
+        "%cATC Trainer · Aeroclub dei Marsi%c\n© 2026 Alessandro Felli — 997Creations · 997creations@gmail.com\n" + BUILD_SIGNATURE,
+        "color:#fbbf24;font-weight:700;font-size:14px",
+        "color:#5ac8f5;font-size:11px"
+      );
+    } catch (e) {}
     return () => { if (document.head.contains(link)) document.head.removeChild(link); };
   }, []);
 
@@ -845,6 +871,9 @@ export default function App() {
             onDown={handlePttDown}
             onUp={handlePttUp}
           />
+
+          {/* Pannello fraseologia VFR a scomparsa (997Creations) */}
+          <PhraseologyTab />
         </div>
 
         <aside className="sidebar">

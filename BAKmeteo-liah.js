@@ -55,7 +55,6 @@
             current: 'temperature_2m,relative_humidity_2m,pressure_msl,wind_speed_10m,wind_direction_10m,weather_code',
             hourly: 'temperature_2m,pressure_msl',
             timezone: 'Europe/Rome',
-            past_days: '2',
             forecast_days: '1',
             wind_speed_unit: 'kn'
         });
@@ -89,24 +88,9 @@
             }
 
             // Orario aggiornamento
-            // Orario aggiornamento: uso l'ora REALE del momento (non solo cur.time,
-            // che è arrotondato all'ora piena dal modello)
-            const now = new Date();
-            const dataOra = now.toLocaleString('it-IT', {
-                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-            });
-            setText('m-updated', 'Aggiornato ' + dataOra);
-
-            // Titolo grafico con la data reale di oggi
-            const oggiStr = now.toLocaleDateString('it-IT', {
-                weekday: 'long', day: 'numeric', month: 'long'
-            });
-            const titleEl = document.getElementById('meteo-chart-title');
-            if (titleEl) {
-                const cap = oggiStr.charAt(0).toUpperCase() + oggiStr.slice(1);
-                titleEl.textContent = 'Andamento QNH e Temperatura · ' + cap +
-                    ' (agg. ' + now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + ')';
-            }
+            const now = new Date(cur.time);
+            setText('m-updated', 'Aggiornato alle ' +
+                now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
 
             // Grafico orario QNH + temperatura
             renderChart(data.hourly);
@@ -127,54 +111,15 @@
         const canvas = document.getElementById('meteoChartLiah');
         if (!canvas || typeof Chart === 'undefined') return;
 
-        const giorniBrevi = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-
-        // Costruisco le etichette dalla timeline completa (2 giorni passati + oggi).
-        // Ogni punto è un'ora; mostro il giorno solo a mezzanotte e ogni 6 ore l'ora.
-        const times = hourly.time.map(t => new Date(t));
-        const labels = times.map((d) => {
-            const h = d.getHours();
-            if (h === 0) return giorniBrevi[d.getDay()] + ' 00';
-            return String(h).padStart(2, '0');
-        });
+        // Estrai le 24 ore del giorno
+        const labels = hourly.time.map(t => t.split('T')[1]);
         const temps = hourly.temperature_2m;
         const press = hourly.pressure_msl;
 
-        // Indice del punto più vicino all'ora attuale (per la linea "ora")
-        const now = new Date();
-        let nowIdx = 0, best = Infinity;
-        times.forEach((d, i) => {
-            const diff = Math.abs(d - now);
-            if (diff < best) { best = diff; nowIdx = i; }
-        });
+        // Evidenzia l'ora corrente
+        const nowHour = new Date().getHours();
 
         if (meteoChart) { meteoChart.destroy(); meteoChart = null; }
-
-        // Plugin per la linea verticale "ORA" e i separatori di mezzanotte
-        const nowLinePlugin = {
-            id: 'nowLine',
-            afterDraw(chart) {
-                const { ctx, chartArea, scales } = chart;
-                const xPos = scales.x.getPixelForValue(nowIdx);
-                // Linea ORA
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(xPos, chartArea.top);
-                ctx.lineTo(xPos, chartArea.bottom);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#c9a960';
-                ctx.setLineDash([4, 4]);
-                ctx.stroke();
-                // Etichetta ORA
-                ctx.setLineDash([]);
-                ctx.fillStyle = '#c9a960';
-                ctx.font = "700 10px Inter, sans-serif";
-                ctx.textAlign = 'center';
-                const lblX = Math.min(Math.max(xPos, chartArea.left + 18), chartArea.right - 18);
-                ctx.fillText('ORA', lblX, chartArea.top + 11);
-                ctx.restore();
-            }
-        };
 
         const ctx = canvas.getContext('2d');
         meteoChart = new Chart(ctx, {
@@ -222,13 +167,7 @@
                         bodyFont: { family: 'Inter' },
                         padding: 10,
                         callbacks: {
-                            title: (items) => {
-                                const d = times[items[0].dataIndex];
-                                return d.toLocaleString('it-IT', {
-                                    weekday: 'short', day: '2-digit', month: '2-digit',
-                                    hour: '2-digit', minute: '2-digit'
-                                });
-                            }
+                            title: (items) => 'Ore ' + items[0].label
                         }
                     }
                 },
@@ -237,12 +176,8 @@
                         grid: { display: false },
                         ticks: {
                             font: { family: 'Inter', size: 10 },
-                            maxTicksLimit: 14,
-                            autoSkip: true,
-                            color: (c) => {
-                                const lbl = c.tick && c.tick.label;
-                                return (lbl && lbl.length > 2) ? '#c9a960' : '#64748b';
-                            }
+                            maxTicksLimit: 12,
+                            color: '#64748b'
                         }
                     },
                     yTemp: {
@@ -260,8 +195,7 @@
                         grid: { drawOnChartArea: false }
                     }
                 }
-            },
-            plugins: [nowLinePlugin]
+            }
         });
     }
 
@@ -269,8 +203,8 @@
     function init() {
         if (!document.getElementById('meteo-widget-liah')) return;
         loadMeteo();
-        // Aggiorna ogni 10 minuti se la pagina resta aperta
-        setInterval(loadMeteo, 10 * 60 * 1000);
+        // Aggiorna ogni 15 minuti se la pagina resta aperta
+        setInterval(loadMeteo, 15 * 60 * 1000);
     }
 
     if (document.readyState === 'loading') {

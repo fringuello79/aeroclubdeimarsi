@@ -1647,6 +1647,213 @@ footer::before {
 }
 
 /* ============================================================
+   BARRA-GIORNO / FINESTRA VFR
+   ============================================================ */
+.vfr-daybar {
+    margin: 0.4rem 0 1.6rem;
+}
+
+.daybar-track {
+    position: relative;
+    width: 100%;
+    height: 46px;
+    border-radius: 10px;
+    overflow: hidden;
+    /* Cielo nelle 24 ore: notte → alba → giorno → tramonto → notte */
+    background: linear-gradient(90deg,
+        #0b1430 0%,
+        #16234d 18%,
+        #c2703a 26%,
+        #88b8e0 33%,
+        #bfe0f5 50%,
+        #88b8e0 67%,
+        #c2703a 74%,
+        #16234d 82%,
+        #0b1430 100%);
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+/* Banda VFR (riserva di luce) */
+.daybar-band.daybar-vfr {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(34, 197, 94, 0.0) 0px,
+        rgba(34, 197, 94, 0.0) 6px,
+        rgba(34, 197, 94, 0.18) 6px,
+        rgba(34, 197, 94, 0.18) 12px);
+    border-left: 2px solid rgba(34, 197, 94, 0.8);
+    border-right: 2px solid rgba(34, 197, 94, 0.8);
+    pointer-events: none;
+}
+
+/* Marker alba e tramonto */
+.daybar-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.55);
+    transform: translateX(-50%);
+}
+
+.daybar-marker span {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+}
+
+.daybar-sr span::before { content: "🌅"; }
+.daybar-ss span::before { content: "🌇"; }
+
+/* Indicatore ORA */
+.daybar-now {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    background: var(--gold);
+    transform: translateX(-50%);
+    transition: left 0.5s var(--ease);
+    box-shadow: 0 0 8px rgba(201, 169, 96, 0.8);
+    z-index: 3;
+}
+
+.daybar-now-dot {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(201, 169, 96, 0.9);
+}
+
+.daybar-now-dot::after {
+    content: "ORA";
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+}
+
+/* Orari sotto la barra */
+.daybar-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.7rem;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.dt-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 64px;
+}
+
+.dt-lbl {
+    font-size: 0.68rem;
+    color: var(--slate-light);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.dt-val {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--sky-deep);
+}
+
+/* Badge di stato */
+.daybar-status {
+    margin-top: 0.9rem;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+.daybar-status.vfr-open {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #15803d;
+}
+
+.daybar-status.vfr-closed {
+    background: rgba(30, 58, 138, 0.1);
+    border: 1px solid rgba(30, 58, 138, 0.3);
+    color: var(--sky-mid);
+}
+
+/* Versione compatta per la home */
+.daybar-compact .daybar-track { height: 34px; }
+.daybar-compact .daybar-times { font-size: 0.9em; }
+.daybar-compact .dt-val { font-size: 0.92rem; }
+
+/* ============================================================
+   WIDGET METEO HOME (compatto)
+   ============================================================ */
+.meteo-home {
+    background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+    border-top: 3px solid var(--sky-light);
+    padding: 1.6rem 1.8rem;
+    margin: 2rem 0;
+}
+
+.meteo-home-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+}
+
+.meteo-home-head h3 {
+    margin: 0;
+    padding-left: 0;
+    font-size: 1.2rem;
+}
+
+.meteo-home-head h3::before { display: none; }
+
+.meteo-home-head .meteo-updated {
+    font-size: 0.78rem;
+    color: var(--slate-light);
+}
+
+.meteo-home-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1.4rem;
+}
+
+.meteo-home-link {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+/* ============================================================
    PARALLAX (per aviosuperficie - INVARIATO)
    ============================================================ */
 .parallax-container {

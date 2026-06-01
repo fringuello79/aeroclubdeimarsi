@@ -62,43 +62,54 @@
 
             <p>Offriamo corsi VDS strutturati e voli da diporto sui nostri Tecnam, in uno degli scenari più belli d'Abruzzo: la Conca del Fucino, tra il Velino e il Sirente. Apriamo le porte al territorio con iniziative come "Donne in Volo" e l'Open Day annuale, e teniamo seminari di sicurezza del volo aperti a tutti. Tutto questo, e una buona dose di passione.</p>
 
-            <!-- NUMERI IRONICI -->
-            <div class="numeri-section">
-                <h3>I numeri dell'Aeroclub</h3>
-                <p class="numeri-subtitle">Alcuni hanno senso, altri molto meno. Sono i nostri.</p>
-                <div class="numeri-grid">
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="2">0</div>
-                        <div class="numero-label">hangar per riparare gli aerei (e qualche bici)</div>
-                    </div>
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="800">0</div>
-                        <div class="numero-label">metri di pista in asfalto</div>
-                    </div>
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="2200">0</div>
-                        <div class="numero-label">piedi di altitudine sul livello del mare</div>
-                    </div>
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="6195">0</div>
-                        <div class="numero-label">le marche del nostro P96 Golf</div>
-                    </div>
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="33">0</div>
-                        <div class="numero-label">ore di teoria nel corso VDS Basico</div>
-                    </div>
-                    <div class="numero-box">
-                        <div class="numero-valore" data-target="200">0</div>
-                        <div class="numero-label">km/h di crociera (sempre con il vento giusto)</div>
-                    </div>
-                </div>
-            </div>
-
             <h3>Cosa Facciamo</h3>
 
             <div class="photo-banner">
                 <img src="galleria-3.jpg" alt="In volo sulla Marsica">
                 <div class="photo-caption">Una mattina qualunque all'aviosuperficie di Celano.</div>
+            </div>
+
+            <!-- WIDGET METEO COMPATTO (barra-giorno VFR + dati essenziali) -->
+            <div class="meteo-home" id="meteo-home">
+                <div class="meteo-home-head">
+                    <h3>🛫 Si vola oggi?</h3>
+                    <span class="meteo-updated" id="m-updated">Caricamento…</span>
+                </div>
+                <div class="vfr-daybar daybar-compact" id="vfr-daybar">
+                    <div class="meteo-loading">Caricamento finestra VFR…</div>
+                </div>
+                <div class="meteo-home-grid">
+                    <div class="meteo-cell">
+                        <span class="meteo-icon">🌡️</span>
+                        <div class="meteo-val" id="m-temp">—</div>
+                        <div class="meteo-lbl">Temp.</div>
+                    </div>
+                    <div class="meteo-cell">
+                        <span class="meteo-icon">💨</span>
+                        <div class="meteo-val" id="m-wind">—</div>
+                        <div class="meteo-lbl">Vento</div>
+                    </div>
+                    <div class="meteo-cell">
+                        <span class="meteo-icon">📊</span>
+                        <div class="meteo-val" id="m-qnh">—</div>
+                        <div class="meteo-lbl">QNH</div>
+                    </div>
+                    <div class="meteo-cell da-cell da-status-ok" id="da-cell">
+                        <span class="meteo-icon">🛫</span>
+                        <div class="meteo-val" id="m-da">—</div>
+                        <div class="meteo-lbl">Density Alt.</div>
+                    </div>
+                </div>
+                <div class="meteo-home-link">
+                    <a href="aviosuperficie.html" class="btn">Meteo completo e grafici →</a>
+                </div>
+            </div>
+
+            <!-- NUMERI IRONICI (scorrevoli, random) -->
+            <div class="numeri-section">
+                <h3>I numeri dell'Aeroclub</h3>
+                <p class="numeri-subtitle">Alcuni hanno senso, altri molto meno. Sono i nostri.</p>
+                <div class="numeri-grid" id="numeri-grid"></div>
             </div>
 
             <div class="card">
@@ -187,5 +198,7 @@
 
     <script src="mobile-menu.js"></script>
     <script src="interactions.js"></script>
+    <script src="meteo-liah.js"></script>
+    <script src="numeri-random.js"></script>
 </body>
 </html>

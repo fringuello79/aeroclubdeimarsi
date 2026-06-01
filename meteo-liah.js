@@ -54,6 +54,7 @@
             longitude: LIAH_LNG.toFixed(4),
             current: 'temperature_2m,relative_humidity_2m,pressure_msl,wind_speed_10m,wind_direction_10m,weather_code',
             hourly: 'temperature_2m,pressure_msl',
+            daily: 'sunrise,sunset',
             timezone: 'Europe/Rome',
             past_days: '2',
             forecast_days: '1',
@@ -108,8 +109,17 @@
                     ' (agg. ' + now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + ')';
             }
 
-            // Grafico orario QNH + temperatura
+            // Grafico orario QNH + temperatura (solo se il canvas esiste in pagina)
             renderChart(data.hourly);
+
+            // Barra-giorno / finestra VFR (solo se l'elemento esiste in pagina)
+            if (data.daily && data.daily.sunrise && data.daily.sunset) {
+                // Indice di "oggi" nella serie daily: con past_days=2 è il terzo elemento
+                const idxOggi = data.daily.time ? data.daily.time.length - 1 : 2;
+                const sunrise = new Date(data.daily.sunrise[idxOggi]);
+                const sunset  = new Date(data.daily.sunset[idxOggi]);
+                renderDaylight(sunrise, sunset);
+            }
 
         } catch (err) {
             console.error('Errore meteo Open-Meteo:', err);
@@ -120,6 +130,113 @@
                     '<p class="meteo-loading">Dati meteo momentaneamente non disponibili. ' +
                     'Riprova più tardi o consulta le fonti ufficiali qui sotto.</p>';
             }
+            const upd = document.getElementById('m-updated');
+            if (upd) upd.textContent = 'Dati non disponibili';
+        }
+    }
+
+    // Stato effemeridi corrente (per il refresh dell'indicatore ORA al minuto)
+    let _vfrData = null;
+
+    // Disegna/aggiorna la barra-giorno con la finestra VFR.
+    // VFR diurno Italia: da SR-30' a SS+30' (riserva di luce). Orari ufficiali
+    // = effemeridi AIP; qui indicazione visiva.
+    function renderDaylight(sunrise, sunset) {
+        _vfrData = { sunrise, sunset };
+        const wrap = document.getElementById('vfr-daybar');
+        if (!wrap) return;
+
+        const MIN = 60 * 1000;
+        const vfrStart = new Date(sunrise.getTime() - 30 * MIN);
+        const vfrEnd   = new Date(sunset.getTime()  + 30 * MIN);
+
+        const pctOfDay = (d) => {
+            const mins = d.getHours() * 60 + d.getMinutes();
+            return (mins / 1440) * 100;
+        };
+
+        const srPct  = pctOfDay(sunrise);
+        const ssPct  = pctOfDay(sunset);
+        const vsPct  = pctOfDay(vfrStart);
+        const vePct  = pctOfDay(vfrEnd);
+
+        // Costruisco la barra (una sola volta) o aggiorno le parti dinamiche
+        if (!wrap.dataset.built) {
+            wrap.innerHTML = `
+                <div class="daybar-track" id="daybar-track">
+                    <div class="daybar-band daybar-vfr" id="daybar-vfr"></div>
+                    <div class="daybar-marker daybar-sr" id="dm-sr"><span></span></div>
+                    <div class="daybar-marker daybar-ss" id="dm-ss"><span></span></div>
+                    <div class="daybar-now" id="daybar-now"><div class="daybar-now-dot"></div></div>
+                </div>
+                <div class="daybar-times" id="daybar-times"></div>
+                <div class="daybar-status" id="daybar-status"></div>
+            `;
+            wrap.dataset.built = "1";
+        }
+
+        const fmt = (d) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+        // Banda VFR (verde) da vfrStart a vfrEnd
+        const vfrBand = document.getElementById('daybar-vfr');
+        if (vfrBand) {
+            vfrBand.style.left = vsPct + '%';
+            vfrBand.style.width = (vePct - vsPct) + '%';
+        }
+        // Marker alba/tramonto
+        const mSr = document.getElementById('dm-sr');
+        const mSs = document.getElementById('dm-ss');
+        if (mSr) mSr.style.left = srPct + '%';
+        if (mSs) mSs.style.left = ssPct + '%';
+
+        // Orari sotto la barra
+        const times = document.getElementById('daybar-times');
+        if (times) {
+            times.innerHTML = `
+                <div class="dt-item"><span class="dt-lbl">VFR da</span><span class="dt-val">${fmt(vfrStart)}</span></div>
+                <div class="dt-item"><span class="dt-lbl">🌅 Alba</span><span class="dt-val">${fmt(sunrise)}</span></div>
+                <div class="dt-item"><span class="dt-lbl">🌇 Tramonto</span><span class="dt-val">${fmt(sunset)}</span></div>
+                <div class="dt-item"><span class="dt-lbl">VFR fino a</span><span class="dt-val">${fmt(vfrEnd)}</span></div>
+            `;
+        }
+
+        updateDaylightNow();
+    }
+
+    // Aggiorna solo l'indicatore "ORA" e il badge di stato (chiamabile al minuto)
+    function updateDaylightNow() {
+        if (!_vfrData) return;
+        const track = document.getElementById('daybar-track');
+        const nowEl = document.getElementById('daybar-now');
+        const statusEl = document.getElementById('daybar-status');
+        if (!track || !nowEl) return;
+
+        const MIN = 60 * 1000;
+        const { sunrise, sunset } = _vfrData;
+        const vfrStart = new Date(sunrise.getTime() - 30 * MIN);
+        const vfrEnd   = new Date(sunset.getTime()  + 30 * MIN);
+        const now = new Date();
+        const nowPct = ((now.getHours() * 60 + now.getMinutes()) / 1440) * 100;
+        nowEl.style.left = nowPct + '%';
+
+        if (!statusEl) return;
+        const inVfr = now >= vfrStart && now <= vfrEnd;
+        if (inVfr) {
+            const restaMin = Math.round((vfrEnd - now) / MIN);
+            const h = Math.floor(restaMin / 60), m = restaMin % 60;
+            statusEl.className = 'daybar-status vfr-open';
+            statusEl.innerHTML = `✅ <strong>Finestra VFR aperta</strong> · restano ${h}h ${String(m).padStart(2,'0')}min di luce utile`;
+        } else {
+            // Quanto manca alla prossima apertura?
+            let next = vfrStart;
+            if (now > vfrEnd) {
+                // domani: stima +1 giorno (indicativa)
+                next = new Date(vfrStart.getTime() + 24 * 60 * MIN);
+            }
+            const mancaMin = Math.max(0, Math.round((next - now) / MIN));
+            const h = Math.floor(mancaMin / 60), m = mancaMin % 60;
+            statusEl.className = 'daybar-status vfr-closed';
+            statusEl.innerHTML = `🌙 <strong>Fuori finestra VFR</strong> · riapre tra circa ${h}h ${String(m).padStart(2,'0')}min`;
         }
     }
 
@@ -267,10 +384,13 @@
 
     // Avvia quando il DOM e Chart.js sono pronti
     function init() {
-        if (!document.getElementById('meteo-widget-liah')) return;
+        if (!document.getElementById('meteo-widget-liah') &&
+            !document.getElementById('meteo-home')) return;
         loadMeteo();
-        // Aggiorna ogni 10 minuti se la pagina resta aperta
+        // Aggiorna i dati meteo ogni 10 minuti
         setInterval(loadMeteo, 10 * 60 * 1000);
+        // Muovi l'indicatore ORA della barra-giorno ogni minuto (senza richiamare l'API)
+        setInterval(updateDaylightNow, 60 * 1000);
     }
 
     if (document.readyState === 'loading') {

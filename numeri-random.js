@@ -22,7 +22,7 @@
         { val: 100,    suffix: " HP",   label: "per ciascun motore Rotax 912" },
         { val: 42.05,  suffix: "° N",   label: "la nostra latitudine, più o meno" },
         { val: 13.56,  suffix: "° E",   label: "la nostra longitudine, idem" },
-        { val: 123.5,  suffix: " MHz",  label: "la frequenza Traffico di Celano" },
+        { val: 130.0,  display: "130.00 MHz",  label: "la frequenza Radio di Celano" },
         { val: 7000,   label: "lo squawk VFR di conformità" },
         { val: 1013,   suffix: " hPa",  label: "la pressione standard ISA" },
         { val: 2,      label: "i Tecnam che custodiamo come gioielli" },
@@ -108,13 +108,23 @@
             const valEl = box.querySelector('.numero-valore');
             const lblEl = box.querySelector('.numero-label');
             lblEl.textContent = item.label;
-            if (animate) animateValue(valEl, item.val, item.suffix);
-            else valEl.textContent = fmt(item.val) + (item.suffix || '');
+            if (item.display) {
+                // Valore già formattato (es. frequenze): niente conteggio animato
+                valEl.textContent = item.display;
+            } else if (animate) {
+                animateValue(valEl, item.val, item.suffix);
+            } else {
+                valEl.textContent = fmt(item.val) + (item.suffix || '');
+            }
         }
 
         // Anima i primi all'ingresso
         boxes.forEach((box, i) => {
             const valEl = box.querySelector('.numero-valore');
+            if (current[i].display) {
+                valEl.textContent = current[i].display;
+                return;
+            }
             valEl.textContent = '0';
             setTimeout(() => animateValue(valEl, current[i].val, current[i].suffix), 200 + i * 120);
         });

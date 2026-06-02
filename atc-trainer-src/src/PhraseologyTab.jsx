@@ -20,7 +20,7 @@ const _9_9_7_ = ["A.Felli", "997Creations", "AeroclubDeiMarsi", "ATCTrainer"];
 
 /* Fraseologia coerente con le frequenze reali:
    LIBP — Ground 121.800 · Tower 118.450 · Approach 120.050
-   LIAH — Traffic  123.500
+   LIAH — Traffic  130.000
    I-6195 (P96 Golf) · I-8297 (P2002 Sierra) */
 const SECTIONS = [
   {
@@ -113,7 +113,7 @@ const SECTIONS = [
   },
   {
     id: "liah-traffic",
-    title: "Aviosuperficie non controllata (LIAH — Traffic 123.500)",
+    title: "Aviosuperficie non controllata (LIAH — Traffic 130.000)",
     accent: "#22c55e",
     rows: [
       { who: "NOTA",   txt: "Su frequenza di traffico non c'è un controllore: i riporti sono autoinformazione tra piloti. Si chiude e si apre il messaggio con il nome del campo." },

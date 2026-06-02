@@ -28,7 +28,7 @@ export const FREQ_ABBR = {
   "121.800": "GND",
   "118.450": "TWR",
   "120.050": "AP",
-  "123.500": "TRF",
+  "130.000": "TRF",
   "124.200": "RMI",
   "121.500": "EMG",
 };
@@ -253,7 +253,7 @@ export const AIRPORT_LIAH = {
   runwayInfo: "RWY 08/26 · 800m · ASPH",
   rwyTrueHeading: 80,
   freqs: [
-    { label: "TRAFFIC",   value: "123.500" },
+    { label: "TRAFFIC",   value: "130.000" },
   ],
   parking: LIAH_PARKING,
   defaultStand: "1",

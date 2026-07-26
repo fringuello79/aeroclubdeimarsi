@@ -3,22 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velivoli - Aeroclub dei Marsi</title>
+    <title>Velivoli · Aeroclub dei Marsi</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Aeroclub dei Marsi">
+    <meta property="og:title" content="Velivoli · Aeroclub dei Marsi">
+    <meta property="og:description" content="I nostri Tecnam P96 Golf e P2002 Sierra Avanzato. Dati tecnici e utilizzo.">
+    <meta property="og:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta property="og:locale" content="it_IT">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Velivoli · Aeroclub dei Marsi">
+    <meta name="twitter:description" content="I nostri Tecnam P96 Golf e P2002 Sierra Avanzato. Dati tecnici e utilizzo.">
+    <meta name="twitter:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta name="description" content="I velivoli dell'Aeroclub dei Marsi: Tecnam P96 Golf I-6195 e Tecnam P2002 Sierra Avanzato I-8297. Dati tecnici e utilizzo.">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
         <div class="header-content">
             <div class="header-title-wrapper">
-                <img src="logo.jpg" alt="Logo Aeroclub dei Marsi" id="header-logo">
+                <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi" id="header-logo">
                 <h1>Aeroclub dei Marsi</h1>
             </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Apri menu" aria-expanded="false">&#9776;</button>
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="chi-siamo.html">Chi Siamo</a></li>
                     <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
                     <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html">Quiz VDS</a></li>
                     <li><a href="eventi.html">Eventi</a></li>
                     <li><a href="area-soci.html">Area Soci</a></li>
                     <li><a href="velivoli.html" class="active">Velivoli</a></li>
@@ -29,149 +46,148 @@
         </div>
     </header>
 
+    <section class="hero">
+        <img src="hero-velivoli.jpg" alt="Un velivolo Tecnam dell'Aeroclub con le montagne innevate sullo sfondo" class="hero-image">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-eyebrow">La nostra flotta</span>
+            <h2>Due Tecnam,<br>tanta voglia di volare.</h2>
+            <p class="hero-subtitle">Ultraleggeri moderni, mantenuti con cura, pronti per la scuola e per il volo da diporto dei soci.</p>
+        </div>
+    </section>
+
     <div class="container">
         <main>
             <h2>I Nostri Velivoli</h2>
-            
-            <p>L'Aeroclub dei Marsi dispone di una flotta moderna di velivoli Tecnam, perfetti sia per l'addestramento che per il volo da diporto. Tutti i velivoli sono mantenuti secondo gli standard di sicurezza più elevati e sottoposti a regolare manutenzione.</p>
 
+            <p>L'Aeroclub dei Marsi dispone di due ultraleggeri Tecnam, utilizzati per la scuola di volo VDS e per il volo da diporto dei soci. Entrambi i velivoli sono mantenuti secondo gli standard di sicurezza più elevati e sottoposti a regolare manutenzione programmata.</p>
+
+            <h3>Tecnam P96 Golf I-6195</h3>
+            <img src="velivolo-p96.jpg" alt="Tecnam P96 Golf nell'hangar dell'Aeroclub" class="aircraft-photo">
             <div class="card">
-                <div class="aircraft-header">
-                    <div class="aircraft-info">
-                        <h3>✈️ Tecnam P96 Golf I-6195</h3>
-                        <h4>Caratteristiche Generali</h4>
-                        <p>Il Tecnam P96 Golf è un ultraleggero biposto progettato per l'addestramento al volo e il volo da diporto. Caratterizzato da eccellenti qualità di volo e bassi costi operativi, è l'ideale per chi si avvicina al mondo dell'aviazione.</p>
-                    </div>
-                    <div class="aircraft-image">
-                        <img src="P96senzasfondo.png" alt="Tecnam P96 Golf" />
-                    </div>
-                </div>
-                
+                <p>Il Tecnam P96 Golf è un ultraleggero biposto progettato per l'addestramento al volo e il volo da diporto. Caratterizzato da eccellenti qualità di volo e bassi costi operativi, è l'ideale per chi si avvicina al mondo dell'aviazione e per il volo turistico dei soci piloti.</p>
+
                 <h4>Dati Tecnici</h4>
                 <table>
                     <tr>
                         <th>Caratteristica</th>
                         <th>Valore</th>
                     </tr>
-                    <tr>
-                        <td>Marche</td>
-                        <td>I-6195</td>
-                    </tr>
-                    <tr>
-                        <td>Tipo</td>
-                        <td>Ultraleggero</td>
-                    </tr>
-                    <tr>
-                        <td>Posti</td>
-                        <td>2 (affiancati)</td>
-                    </tr>
-                    <tr>
-                        <td>Motore</td>
-                        <td>Rotax 912 ULS (100 HP)</td>
-                    </tr>
-                    <tr>
-                        <td>Velocità di crociera</td>
-                        <td>Circa 180 km/h</td>
-                    </tr>
-                    <tr>
-                        <td>Autonomia</td>
-                        <td>Circa 4 ore</td>
-                    </tr>
-                    <tr>
-                        <td>Consumo</td>
-                        <td>Circa 15 L/h</td>
-                    </tr>
+                    <tr><td>Marche</td><td>I-6195</td></tr>
+                    <tr><td>Tipo</td><td>Ultraleggero a motore (ULM)</td></tr>
+                    <tr><td>Posti</td><td>2 (affiancati)</td></tr>
+                    <tr><td>Motore</td><td>Rotax 912 (100 HP)</td></tr>
+                    <tr><td>Velocità di crociera</td><td>Circa 180 km/h</td></tr>
+                    <tr><td>Autonomia</td><td>Circa 4 ore</td></tr>
+                    <tr><td>Consumo</td><td>Circa 15 L/h</td></tr>
                 </table>
 
                 <h4>Utilizzo</h4>
                 <ul>
-                    <li>Addestramento al volo per allievi piloti</li>
                     <li>Volo da diporto per soci piloti</li>
-           
+                    <li>Voli dimostrativi nelle iniziative dell'Aeroclub (es. "Donne in Volo")</li>
+                    <li>Voli turistici sulla Conca del Fucino e sull'Appennino marsicano</li>
                 </ul>
 
                 <h4>Prenotazione</h4>
-                <p>I soci piloti possono prenotare il P96 attraverso il <a href="https://fringuello79.github.io/prenotazione-p96/" target="_blank" rel="noopener noreferrer">sistema di prenotazione online</a>.</p>
+                <p>I soci piloti possono prenotare il P96 attraverso il <a href="https://fringuello79.github.io/prenotazione-p96/" target="_blank" rel="noopener noreferrer">sistema di prenotazione online</a>, accessibile dall'<a href="area-soci.html">Area Soci</a>.</p>
             </div>
 
+            <h3>Tecnam P2002 Sierra Avanzato I-8297</h3>
+            <img src="velivolo-p2002.jpg" alt="Tecnam P2002 Sierra Avanzato nell'hangar dell'Aeroclub" class="aircraft-photo">
             <div class="card">
-                <div class="aircraft-header">
-                    <div class="aircraft-info">
-                        <h3>✈️ Tecnam P2002 Sierra I-8297</h3>
-                        <h4>Caratteristiche Generali</h4>
-                        <p>Il Tecnam P2002 Sierra è un velivolo biposto monomotore certificato, progettato per l'addestramento avanzato e il volo da diporto. Offre prestazioni superiori e un comfort eccellente per viaggi più lunghi.</p>
-                    </div>
-                    <div class="aircraft-image">
-                        <img src="P2002senzasfondo.png" alt="Tecnam P2002 Sierra" />
-                    </div>
-                </div>
-                
+                <p>Il Tecnam P2002 Sierra è un ultraleggero avanzato biposto monomotore, progettato per l'addestramento e il volo da diporto. Offre prestazioni superiori, un cockpit ben strumentato e un comfort eccellente per missioni più impegnative. È il velivolo utilizzato per i nostri corsi VDS Basico e VDS Avanzato.</p>
+
                 <h4>Dati Tecnici</h4>
                 <table>
                     <tr>
                         <th>Caratteristica</th>
                         <th>Valore</th>
                     </tr>
-                    <tr>
-                        <td>Marche</td>
-                        <td>I-8297</td>
-                    </tr>
-                    <tr>
-                        <td>Tipo</td>
-                        <td>VLA (Very Light Aircraft)</td>
-                    </tr>
-                    <tr>
-                        <td>Posti</td>
-                        <td>2 (affiancati)</td>
-                    </tr>
-                    <tr>
-                        <td>Motore</td>
-                        <td>Rotax 912S (100 HP)</td>
-                    </tr>
-                    <tr>
-                        <td>Velocità di crociera</td>
-                        <td>Circa 200 km/h</td>
-                    </tr>
-                    <tr>
-                        <td>Autonomia</td>
-                        <td>Circa 5 ore</td>
-                    </tr>
-                    <tr>
-                        <td>Consumo</td>
-                        <td>Circa 16 L/h</td>
-                    </tr>
+                    <tr><td>Marche</td><td>I-8297</td></tr>
+                    <tr><td>Tipo</td><td>Ultraleggero a motore Avanzato (ULM)</td></tr>
+                    <tr><td>Posti</td><td>2 (affiancati)</td></tr>
+                    <tr><td>Motore</td><td>Rotax 912S (100 HP)</td></tr>
+                    <tr><td>Velocità di crociera</td><td>Circa 200 km/h</td></tr>
+                    <tr><td>Autonomia</td><td>Circa 5 ore</td></tr>
+                    <tr><td>Consumo</td><td>Circa 16 L/h</td></tr>
                 </table>
 
                 <h4>Utilizzo</h4>
                 <ul>
-                  <li>Addestramento avanzato per allievi piloti</li>
-                    <li>Training per licenza VDS e PPL</li>
-                    <li>Voli dimostrativi e di primo approccio</li>
+                    <li>Addestramento per il corso VDS Basico (33 ore teoria + 16 ore pratica)</li>
+                    <li>Addestramento per il corso VDS Avanzato</li>
+                    <li>Voli di check-out e mantenimento delle competenze dei soci piloti</li>
                 </ul>
 
                 <h4>Disponibilità</h4>
-                <p>Il P2002 Sierra è utilizzato dalla scuola volo per le attività di addestramento.</p>
+                <p>Il P2002 Sierra Avanzato è principalmente utilizzato dalla scuola di volo. Per informazioni sulla disponibilità per i soci piloti, contattaci direttamente.</p>
             </div>
 
             <div class="info-box">
-                <p><strong>Nota:</strong> Per poter volare sui velivoli dell'Aeroclub è necessario:</p>
+                <p><strong>Per volare sui velivoli dell'Aeroclub è necessario:</strong></p>
                 <ul>
                     <li>Essere socio in regola con il tesseramento</li>
-                    <li>Possedere una licenza di volo valida</li>
+                    <li>Possedere un attestato VDS valido (e abilitazione VDS Avanzato dove richiesto)</li>
                     <li>Aver effettuato il check-out sul velivolo specifico con un istruttore dell'Aeroclub</li>
-                    <li>Essere in possesso di certificato medico valido</li>
+                    <li>Essere in possesso del certificato di idoneità psicofisica in corso di validità</li>
                 </ul>
             </div>
 
             <div class="info-box">
-                <p><strong>Interessato a volare?</strong> Se sei un pilota brevettato e vuoi conoscere le modalità per utilizzare i nostri velivoli, contattaci!</p>
+                <p><strong>Interessato a volare con noi?</strong> Se sei un pilota VDS brevettato e vuoi conoscere le modalità per utilizzare i nostri velivoli, contattaci!</p>
                 <a href="contatti.html" class="btn">Contattaci</a>
             </div>
         </main>
     </div>
 
     <footer>
-        <p>&copy; 2026 Aeroclub dei Marsi. Tutti i diritti riservati.</p>
+        <div class="footer-main">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi">
+                    <span>Aeroclub dei Marsi</span>
+                </div>
+                <p>Scuola di Volo VDS e comunità di piloti presso l'aviosuperficie LIAH di Celano (AQ), nel cuore della Marsica.</p>
+                <div class="footer-social">
+                    <a href="https://www.instagram.com/aeroclubdeimarsi/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.12 1.38C1.35 2.67.94 3.34.63 4.13.33 4.9.13 5.77.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.28.26 2.15.56 2.91.31.79.72 1.46 1.38 2.12.66.66 1.33 1.07 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.28-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.12-1.38.66-.66 1.07-1.33 1.38-2.12.3-.76.5-1.63.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.28-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.12C21.33 1.35 20.66.94 19.87.63 19.1.33 18.23.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/></svg>
+                    </a>
+                    <a href="https://www.facebook.com/people/aeroclubdeimarsi/100091784172240/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h5>Naviga</h5>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                    <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html">Quiz VDS</a></li>
+                    <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
+                    <li><a href="eventi.html">Eventi</a></li>
+                    <li><a href="velivoli.html">Velivoli</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h5>Contatti</h5>
+                <ul>
+                    <li><a href="tel:+393485112415">📞 +39 348 5112415</a></li>
+                    <li><a href="mailto:infoaeroclubdeimarsi@gmail.com">✉️ infoaeroclubdeimarsi@gmail.com</a></li>
+                    <li>📍 Via della Stanga, Celano (AQ)</li>
+                    <li><a href="area-soci.html">Area Soci</a></li>
+                    <li><a href="galleria.html">Galleria</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Aeroclub dei Marsi · Aviosuperficie LIAH · Celano (AQ)</p>
+            <p class="footer-credit">Sito realizzato da <a href="mailto:997creations@gmail.com">997Creations</a></p>
+        </div>
     </footer>
+
+    <script src="mobile-menu.js"></script>
+    <script src="interactions.js"></script>
 </body>
 </html>

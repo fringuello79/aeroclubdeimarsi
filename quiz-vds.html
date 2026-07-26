@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz VDS · Simulazione esame · Aeroclub dei Marsi</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Aeroclub dei Marsi">
+    <meta property="og:title" content="Quiz VDS · Simulazione esame · Aeroclub dei Marsi">
+    <meta property="og:description" content="Simula l'esame teorico VDS: 70 domande estratte dai questionari ufficiali dell'Aero Club d'Italia.">
+    <meta property="og:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta property="og:locale" content="it_IT">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Quiz VDS · Simulazione esame · Aeroclub dei Marsi">
+    <meta name="twitter:description" content="Simula l'esame teorico VDS: 70 domande estratte dai questionari ufficiali dell'Aero Club d'Italia.">
+    <meta name="twitter:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta name="description" content="Simulazione dell'esame teorico per l'attestato VDS: 70 domande estratte a caso dai questionari ufficiali AeCI, con punteggio, correzione e statistiche per materia.">
+    <link rel="stylesheet" href="styles.css">
+<style>
+/* ============================================================
+   QUIZ VDS - stili specifici, confinati dentro .quiz
+   Usano le variabili e la palette di styles.css v2.0
+   ============================================================ */
+.quiz {
+    --q-ok:    #16a34a;
+    --q-ko:    var(--burgundy);
+    --q-warn:  #b45309;
+    --q-line:  #e2e8f0;
+    --q-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.quiz .hide { display: none !important; }
+.quiz .q-mono { font-family: var(--q-mono); font-variant-numeric: tabular-nums; }
+.quiz .q-muted { color: var(--slate-light); }
+.quiz .q-small { font-size: 0.88rem; }
+
+/* Pannelli: stessa idea delle .card, ma senza le animazioni allo scroll
+   (i pannelli compaiono e scompaiono durante la prova) */
+.quiz .q-card {
+    background: white;
+    border-radius: 12px;
+    border-top: 3px solid var(--gold);
+    border-left: 1px solid rgba(15, 23, 42, 0.05);
+    border-right: 1px solid rgba(15, 23, 42, 0.05);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: var(--shadow-sm);
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 1.5rem;
+}
+.quiz .q-card > h3 {
+    font-family: 'Outfit', sans-serif;
+    color: var(--sky-deep);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    padding-left: 0;
+}
+.quiz .q-card > h3::before { display: none; }
+.quiz .q-card > p:last-child { margin-bottom: 0; }
+
+/* Tabelle piu' compatte di quelle generali */
+.quiz table { margin-bottom: 0; }
+.quiz table th, .quiz table td { padding: 0.6rem 0.9rem; }
+.quiz table td.q-num {
+    font-family: var(--q-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+}
+.quiz table th:last-child { text-align: right; }
+
+/* Scelte prima di iniziare */
+.quiz fieldset { border: 0; margin: 0 0 1.5rem; padding: 0; }
+.quiz legend {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: var(--slate-deep);
+    font-size: 1.02rem;
+    margin-bottom: 0.6rem;
+    padding: 0;
+}
+.quiz .q-opts { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.quiz .q-opt { flex: 1 1 240px; position: relative; }
+.quiz .q-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.quiz .q-opt span {
+    display: block;
+    background: white;
+    border: 2px solid var(--q-line);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--slate-deep);
+    transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.quiz .q-opt small {
+    display: block;
+    font-weight: 400;
+    color: var(--slate-light);
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin-top: 0.15rem;
+}
+.quiz .q-opt input:checked + span {
+    border-color: var(--sky-deep);
+    box-shadow: 0 4px 14px rgba(12, 74, 110, 0.14);
+}
+.quiz .q-opt input:focus-visible + span { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* Bottoni */
+.quiz .btn { margin-top: 0; }
+.quiz .btn-quiet {
+    background: white;
+    color: var(--sky-deep);
+    border: 2px solid var(--sky-deep);
+    box-shadow: none;
+}
+.quiz .btn-quiet:hover { color: var(--sky-deep); background: var(--paper); }
+.quiz .btn-mini { padding: 0.55rem 1.1rem; font-size: 0.86rem; }
+.quiz .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.quiz .q-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.quiz .q-row .q-grow { flex: 1; }
+
+/* Intestazione della prova */
+.quiz .q-hud {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem;
+}
+.quiz .q-pos { font-family: 'Outfit', sans-serif; color: var(--slate-light); font-size: 0.95rem; }
+.quiz .q-pos b {
+    font-family: var(--q-mono);
+    font-size: 1.35rem;
+    color: var(--sky-deep);
+    font-variant-numeric: tabular-nums;
+}
+.quiz #timer {
+    font-family: var(--q-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--sky-deep);
+}
+.quiz #timer.warn { color: var(--q-warn); }
+.quiz #timer.crit { color: var(--q-ko); }
+.quiz .q-rail {
+    height: 6px; background: #e8edf3; border-radius: 3px;
+    overflow: hidden; margin-bottom: 1.5rem;
+}
+.quiz .q-rail i {
+    display: block; height: 100%; width: 0;
+    background: var(--grad-gold);
+    transition: width 0.3s var(--ease-out);
+}
+
+/* Domanda */
+.quiz .q-tag {
+    display: inline-block;
+    background: rgba(12, 74, 110, 0.07);
+    color: var(--sky-deep);
+    border: 1px solid rgba(12, 74, 110, 0.12);
+    border-radius: 20px;
+    padding: 0.22rem 0.85rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.9rem;
+}
+.quiz .q-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.16rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--night);
+    margin: 0 0 1.2rem;
+}
+
+/* Risposte: le caselle del foglio risposte d'esame */
+.quiz .q-answers { display: grid; gap: 0.55rem; margin-bottom: 1.1rem; }
+.quiz .q-ans { position: relative; }
+.quiz .q-ans input { position: absolute; opacity: 0; pointer-events: none; }
+.quiz .q-ans label {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    background: white;
+    border: 2px solid var(--q-line);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.quiz .q-ans label:hover { border-color: var(--sky-light); background: var(--paper); }
+.quiz .q-boxed {
+    width: 36px; height: 36px;
+    display: grid; place-items: center;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    color: var(--slate-light);
+    font-family: var(--q-mono);
+    font-weight: 700;
+    font-size: 0.98rem;
+}
+.quiz .q-ans input:checked + label { border-color: var(--sky-deep); background: white; }
+.quiz .q-ans input:checked + label .q-boxed {
+    background: var(--grad-sky);
+    border-color: transparent;
+    color: white;
+}
+.quiz .q-ans input:focus-visible + label { outline: 3px solid var(--gold); outline-offset: 2px; }
+.quiz .q-ans .q-txt { padding-top: 0.35rem; line-height: 1.6; color: var(--slate); }
+.quiz .q-ans.right label { border-color: var(--q-ok); background: #f0fdf4; }
+.quiz .q-ans.right .q-boxed { background: var(--q-ok); border-color: var(--q-ok); color: white; }
+.quiz .q-ans.wrong label { border-color: var(--q-ko); background: #fdf2f3; }
+.quiz .q-ans.wrong .q-boxed { background: var(--q-ko); border-color: var(--q-ko); color: white; }
+.quiz .q-ans.locked label { cursor: default; }
+.quiz .q-verdict { font-weight: 700; font-size: 0.95rem; margin: -0.4rem 0 1.1rem; }
+.quiz .q-verdict.ok { color: var(--q-ok); }
+.quiz .q-verdict.ko { color: var(--q-ko); }
+
+/* Foglio risposte */
+.quiz details.q-sheet {
+    margin-top: 1.2rem;
+    border-top: 1px solid var(--q-line);
+    padding-top: 0.9rem;
+}
+.quiz details.q-sheet summary {
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: var(--sky-deep);
+    font-size: 0.95rem;
+}
+.quiz .q-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 6px;
+    margin-top: 0.9rem;
+}
+.quiz .q-cell {
+    aspect-ratio: 1;
+    border: 2px solid var(--q-line);
+    border-radius: 8px;
+    background: white;
+    font-family: var(--q-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--slate-light);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.2s var(--ease);
+}
+.quiz .q-cell:hover { transform: translateY(-2px); }
+.quiz .q-cell[data-state="done"] { background: var(--grad-sky); border-color: transparent; color: white; }
+.quiz .q-cell[data-state="flag"] { border-color: var(--gold); color: var(--gold-warm); background: #fffdf6; }
+.quiz .q-cell[data-state="right"] { background: var(--q-ok); border-color: var(--q-ok); color: white; }
+.quiz .q-cell[data-state="wrong"] { background: var(--q-ko); border-color: var(--q-ko); color: white; }
+.quiz .q-cell.here { box-shadow: 0 0 0 3px rgba(201, 169, 96, 0.55); }
+
+/* Esito */
+.quiz .q-score { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.quiz .q-score .q-big {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3.6rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    background: var(--grad-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.quiz .q-score .q-of { color: var(--slate-light); font-size: 1.02rem; }
+.quiz .q-stamp {
+    display: inline-block;
+    margin-top: 0.9rem;
+    padding: 0.4rem 1.1rem;
+    border: 3px solid;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.92rem;
+}
+.quiz .q-stamp.ok { color: var(--q-ok); border-color: var(--q-ok); }
+.quiz .q-stamp.ko { color: var(--q-ko); border-color: var(--q-ko); }
+.quiz .q-bars { display: grid; gap: 0.8rem; }
+.quiz .q-bar-row {
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 0.6rem; align-items: baseline; font-size: 0.94rem;
+}
+.quiz .q-bar-row .q-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--slate-deep); }
+.quiz .q-bar-row .q-vl {
+    font-family: var(--q-mono);
+    font-size: 0.85rem;
+    color: var(--slate-light);
+    white-space: nowrap;
+}
+.quiz .q-bar { grid-column: 1 / -1; height: 6px; background: #e8edf3; border-radius: 3px; overflow: hidden; }
+.quiz .q-bar i { display: block; height: 100%; background: var(--q-ok); }
+.quiz .q-bar i.mid { background: var(--gold-warm); }
+.quiz .q-bar i.low { background: var(--q-ko); }
+.quiz .q-review { display: grid; gap: 1.1rem; }
+.quiz .q-rev { border-left: 4px solid var(--q-ko); padding-left: 1rem; }
+.quiz .q-rev p { margin-bottom: 0.3rem; }
+.quiz .q-rev p:last-child { margin-bottom: 0; }
+.quiz .q-rev .q-qq { font-family: 'Outfit', sans-serif; font-weight: 600; color: var(--night); }
+.quiz .q-rev .q-lbl { font-size: 0.78rem; color: var(--sky-deep); font-weight: 600; }
+.quiz .q-rev .q-yours { color: var(--q-ko); }
+.quiz .q-rev .q-good { color: var(--q-ok); }
+
+.quiz .q-fade { animation: qIn 0.35s var(--ease-out); }
+@keyframes qIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .quiz .q-fade { animation: none; }
+    .quiz .q-rail i, .quiz .q-cell { transition: none; }
+}
+
+@media (max-width: 768px) {
+    .quiz .q-card { padding: 1.3rem 1.2rem; }
+    .quiz .q-text { font-size: 1.08rem; }
+    .quiz .q-score .q-big { font-size: 3rem; }
+}
+@media (max-width: 480px) {
+    .quiz .q-card { padding: 1.1rem 1rem; }
+    .quiz .q-ans label { grid-template-columns: 30px 1fr; gap: 0.65rem; padding: 0.6rem 0.7rem; }
+    .quiz .q-boxed { width: 30px; height: 30px; font-size: 0.88rem; }
+    .quiz .q-grid { grid-template-columns: repeat(auto-fill, minmax(31px, 1fr)); gap: 5px; }
+    .quiz .q-score .q-big { font-size: 2.6rem; }
+    .quiz table th, .quiz table td { padding: 0.5rem 0.6rem; font-size: 0.86rem; }
+}
+</style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-title-wrapper">
+                <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi" id="header-logo">
+                <h1>Aeroclub dei Marsi</h1>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Apri menu" aria-expanded="false">&#9776;</button>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                    <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
+                    <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html" class="active">Quiz VDS</a></li>
+                    <li><a href="eventi.html">Eventi</a></li>
+                    <li><a href="area-soci.html">Area Soci</a></li>
+                    <li><a href="velivoli.html">Velivoli</a></li>
+                    <li><a href="contatti.html">Contatti</a></li>
+                    <li><a href="galleria.html">Galleria</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <img src="hero-scuola-volo.jpg" alt="Pianificazione di un volo VFR su carta aeronautica" class="hero-image">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-eyebrow">Preparazione all'esame · VDS</span>
+            <h2>Pronto per l'esame?<br>Scoprilo adesso.</h2>
+            <p class="hero-subtitle">Settanta domande estratte a caso dai questionari ufficiali dell'Aero Club d'Italia, con lo stesso tempo e la stessa soglia dell'esame vero.</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <main class="quiz">
+            <h2>Quiz VDS</h2>
+
+            <p>Questa è una simulazione della prova teorica per l'attestato di volo da diporto o sportivo.
+            Le domande vengono estratte a caso da un archivio di <strong id="db-count">858</strong> quesiti
+            tratti dai questionari ufficiali AeCI, distribuiti sulle nove materie d'esame.
+            Puoi ripeterla quante volte vuoi: ogni prova è diversa.</p>
+
+            <!-- ============ PRIMA DI INIZIARE ============ -->
+            <section id="view-briefing">
+                <div class="q-card">
+                    <h3>Composizione della prova</h3>
+                    <table id="tab-materie">
+                        <thead><tr><th>Materia</th><th>Domande</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <p class="q-small q-muted" style="margin-top:1.1rem">
+                        Tempo massimo <strong class="q-mono">120 minuti</strong>. Sono ammessi errori fino al 10%:
+                        per risultare idoneo occorre rispondere correttamente ad almeno
+                        <strong class="q-mono">63</strong> domande su <strong class="q-mono">70</strong>.
+                    </p>
+                </div>
+
+                <fieldset>
+                    <legend>Quando vedere le risposte corrette</legend>
+                    <div class="q-opts">
+                        <label class="q-opt">
+                            <input type="radio" name="feedback" value="end" checked>
+                            <span>Alla fine della prova<small>Come all'esame vero: nessun aiuto mentre rispondi.</small></span>
+                        </label>
+                        <label class="q-opt">
+                            <input type="radio" name="feedback" value="now">
+                            <span>Dopo ogni risposta<small>Per studiare: la correzione compare subito.</small></span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Cronometro</legend>
+                    <div class="q-opts">
+                        <label class="q-opt">
+                            <input type="radio" name="clock" value="on" checked>
+                            <span>Attivo<small>120 minuti, consegna automatica allo scadere.</small></span>
+                        </label>
+                        <label class="q-opt">
+                            <input type="radio" name="clock" value="off">
+                            <span>Senza limite<small>Prenditi il tempo che ti serve.</small></span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <button class="btn btn-gold" id="start" style="width:100%">Inizia la prova</button>
+
+                <div class="q-card hide" id="panel-log" style="margin-top:1.8rem">
+                    <h3>Le tue prove</h3>
+                    <table id="tab-log">
+                        <thead><tr><th>Data</th><th>Punteggio</th><th>Esito</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <p class="q-small q-muted" id="log-stats" style="margin-top:0.9rem"></p>
+                    <button class="btn btn-quiet btn-mini" id="clear-log">Cancella lo storico</button>
+                </div>
+
+                <div class="q-card hide" id="panel-weak">
+                    <h3>Materie da ripassare</h3>
+                    <div class="q-bars" id="weak-bars"></div>
+                    <p class="q-small q-muted" style="margin-top:0.9rem">Percentuale di risposte corrette su tutte le prove svolte su questo dispositivo.</p>
+                </div>
+            </section>
+
+            <!-- ============ PROVA ============ -->
+            <section id="view-exam" class="hide">
+                <div class="q-hud">
+                    <span class="q-pos">Domanda <b id="q-pos">1</b> di <span id="q-tot">70</span></span>
+                    <span id="timer">120:00</span>
+                </div>
+                <div class="q-rail"><i id="rail-fill"></i></div>
+
+                <div id="q-host" aria-live="polite"></div>
+
+                <div class="q-row">
+                    <button class="btn btn-quiet" id="prev">Indietro</button>
+                    <button class="btn q-grow" id="next">Avanti</button>
+                </div>
+                <div class="q-row">
+                    <button class="btn btn-quiet btn-mini" id="flag">Segna da rivedere</button>
+                    <button class="btn btn-quiet btn-mini" id="deliver">Consegna la prova</button>
+                </div>
+
+                <details class="q-sheet" open>
+                    <summary>Foglio risposte</summary>
+                    <div class="q-grid" id="sheet-grid"></div>
+                </details>
+            </section>
+
+            <!-- ============ ESITO ============ -->
+            <section id="view-result" class="hide">
+                <div class="q-card">
+                    <h3>Esito della prova</h3>
+                    <div class="q-score"><span class="q-big" id="r-score">0</span><span class="q-of">risposte corrette su 70</span></div>
+                    <div><span class="q-stamp" id="r-stamp">&mdash;</span></div>
+                    <p class="q-small q-muted" id="r-detail" style="margin-top:1.1rem"></p>
+                </div>
+
+                <div class="q-card">
+                    <h3>Risultato per materia</h3>
+                    <div class="q-bars" id="r-bars"></div>
+                </div>
+
+                <div class="q-card" id="r-errors-panel">
+                    <h3>Da rivedere</h3>
+                    <div class="q-review" id="r-errors"></div>
+                </div>
+
+                <div class="q-row">
+                    <button class="btn btn-gold q-grow" id="again">Nuova prova</button>
+                    <button class="btn btn-quiet" id="back">Torna all'inizio</button>
+                </div>
+            </section>
+
+            <div class="info-box">
+                <p><strong>Come funziona l'esame vero.</strong> La prova teorica per l'attestato VDS consiste in
+                70 domande a risposta multipla da svolgere in 120 minuti: si è idonei con un massimo del 10% di errori.
+                Il programma completo dei corsi è nella pagina <a href="scuola-volo.html">Scuola di Volo</a>.</p>
+            </div>
+
+            <p class="q-small q-muted">
+            Le domande provengono dai questionari ufficiali AeCI per l'attestato VDS, classe multiassi.
+            Non sono ancora incluse quelle che richiedono la lettura di una figura.
+            Questo strumento serve per esercitarsi e non sostituisce il corso teorico né l'esame.
+            </p>
+        </main>
+    </div>
+
+    <footer>
+        <div class="footer-main">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi">
+                    <span>Aeroclub dei Marsi</span>
+                </div>
+                <p>Scuola di Volo VDS e comunità di piloti presso l'aviosuperficie LIAH di Celano (AQ), nel cuore della Marsica.</p>
+                <div class="footer-social">
+                    <a href="https://www.instagram.com/aeroclubdeimarsi/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.12 1.38C1.35 2.67.94 3.34.63 4.13.33 4.9.13 5.77.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.28.26 2.15.56 2.91.31.79.72 1.46 1.38 2.12.66.66 1.33 1.07 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.28-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.12-1.38.66-.66 1.07-1.33 1.38-2.12.3-.76.5-1.63.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.28-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.12C21.33 1.35 20.66.94 19.87.63 19.1.33 18.23.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/></svg>
+                    </a>
+                    <a href="https://www.facebook.com/people/aeroclubdeimarsi/100091784172240/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h5>Naviga</h5>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                    <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html">Quiz VDS</a></li>
+                    <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
+                    <li><a href="eventi.html">Eventi</a></li>
+                    <li><a href="velivoli.html">Velivoli</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h5>Contatti</h5>
+                <ul>
+                    <li><a href="tel:+393485112415">📞 +39 348 5112415</a></li>
+                    <li><a href="mailto:infoaeroclubdeimarsi@gmail.com">✉️ infoaeroclubdeimarsi@gmail.com</a></li>
+                    <li>📍 Via della Stanga, Celano (AQ)</li>
+                    <li><a href="area-soci.html">Area Soci</a></li>
+                    <li><a href="galleria.html">Galleria</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Aeroclub dei Marsi · Aviosuperficie LIAH · Celano (AQ)</p>
+            <p class="footer-credit">Sito realizzato da <a href="mailto:997creations@gmail.com">997Creations</a></p>
+        </div>
+    </footer>
+
+    <script src="mobile-menu.js"></script>
+    <script src="interactions.js"></script>
+    <script src="quiz-domande.js"></script>
+<script>
+(function(){
+"use strict";
+
+if(typeof QUIZ_DB==="undefined"){
+  document.getElementById("view-briefing").innerHTML =
+    '<div class="q-card"><h3>Domande non disponibili</h3><p class="q-small">' +
+    'Il file <strong>quiz-domande.js</strong> non &egrave; stato caricato: ' +
+    'assicurati che si trovi nella stessa cartella di questa pagina.</p></div>';
+  return;
+}
+
+/* ---------- archivio locale, tollerante ai blocchi del browser ---------- */
+var KEY="acm-vds-quiz-v1";
+var mem=null;
+function load(){
+  if(mem) return mem;
+  try{ mem=JSON.parse(localStorage.getItem(KEY)) || {prove:[]}; }
+  catch(e){ mem={prove:[]}; }
+  if(!mem.prove) mem.prove=[];
+  return mem;
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(mem)); }catch(e){} }
+
+/* ---------- utilita' ---------- */
+var LET=["a","b","c","d"];
+function $(s){return document.querySelector(s)}
+function el(t,c,x){var n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function etichetta(q){return "Parte "+q.parte+" \u00b7 "+q.mat}
+
+var SEZ=QUIZ_DB.sezioni;
+var TOT=SEZ.reduce(function(s,x){return s+x.quota},0);
+var SOGLIA=Math.ceil(TOT*0.9);
+var LIMITE=120*60;
+
+/* ---------- schermata iniziale ---------- */
+(function briefing(){
+  var tb=$("#tab-materie tbody");
+  SEZ.forEach(function(s){
+    var tr=el("tr");
+    tr.appendChild(el("td",null,s.titolo));
+    tr.appendChild(el("td","q-num",String(s.quota)));
+    tb.appendChild(tr);
+  });
+  $("#q-tot").textContent=TOT;
+  $(".q-of").textContent="risposte corrette su "+TOT;
+  $("#db-count").textContent=SEZ.reduce(function(n,s){return n+s.domande.length},0);
+})();
+
+function renderLog(){
+  var d=load(), p=d.prove;
+  if(!p.length){ $("#panel-log").classList.add("hide"); $("#panel-weak").classList.add("hide"); return; }
+  $("#panel-log").classList.remove("hide");
+  var tb=$("#tab-log tbody"); tb.innerHTML="";
+  p.slice(-8).reverse().forEach(function(r){
+    var dt=new Date(r.t), tr=el("tr");
+    tr.appendChild(el("td",null,
+      dt.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+
+      dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})));
+    tr.appendChild(el("td","q-num",r.ok+"/"+r.tot));
+    var passa=r.ok>=Math.ceil(r.tot*0.9);
+    var td=el("td","q-num",passa?"idoneo":"non idoneo");
+    td.style.color=passa?"#16a34a":"#7a1f2b";
+    td.style.fontWeight="600";
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  });
+  var best=0,sum=0;
+  p.forEach(function(r){ var q=r.ok/r.tot; if(q>best)best=q; sum+=q; });
+  $("#log-stats").textContent="Prove svolte: "+p.length
+    +" \u00b7 media "+Math.round(sum/p.length*100)+"%"
+    +" \u00b7 migliore "+Math.round(best*100)+"%";
+
+  var agg={};
+  p.forEach(function(r){
+    Object.keys(r.mat||{}).forEach(function(k){
+      agg[k]=agg[k]||{ok:0,tot:0};
+      agg[k].ok+=r.mat[k][0]; agg[k].tot+=r.mat[k][1];
+    });
+  });
+  var keys=Object.keys(agg);
+  if(!keys.length){ $("#panel-weak").classList.add("hide"); return; }
+  $("#panel-weak").classList.remove("hide");
+  var host=$("#weak-bars"); host.innerHTML="";
+  keys.map(function(k){
+    var s=SEZ.filter(function(x){return x.slug===k})[0];
+    return {t:s?s.titolo:k, q:agg[k].ok/agg[k].tot, ok:agg[k].ok, tot:agg[k].tot};
+  }).sort(function(a,b){return a.q-b.q}).forEach(function(r){
+    host.appendChild(barRow(r.t,r.ok,r.tot,r.q));
+  });
+}
+
+function barRow(nome,ok,tot,q){
+  var w=el("div","q-bar-row");
+  w.appendChild(el("span","q-nm",nome));
+  w.appendChild(el("span","q-vl",ok+"/"+tot+"  "+Math.round(q*100)+"%"));
+  var b=el("div","q-bar"), i=el("i");
+  i.style.width=Math.round(q*100)+"%";
+  if(q<0.7) i.className="low"; else if(q<0.9) i.className="mid";
+  b.appendChild(i); w.appendChild(b);
+  return w;
+}
+
+/* ---------- estrazione ---------- */
+function keyOf(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"")}
+
+/* Alcuni quesiti compaiono in due questionari diversi (p.es. Aerodinamica e
+   Tecnica di pilotaggio): qui evito che la stessa domanda esca due volte. */
+function build(){
+  var qs=[], visti={};
+  SEZ.forEach(function(s){
+    var pool=shuffle(s.domande.slice()), preso=0;
+    for(var i=0;i<pool.length && preso<s.quota;i++){
+      var d=pool[i], k=keyOf(d.q);
+      if(visti[k]) continue;
+      visti[k]=1; preso++;
+      qs.push({sez:s.slug,mat:s.titolo,parte:s.parte,n:d.n,q:d.q,o:d.o,a:d.a,dato:null,flag:false});
+    }
+  });
+  return qs;
+}
+
+/* ---------- stato della prova ---------- */
+var S=null;
+
+function startExam(){
+  S={
+    qs:build(), i:0,
+    subito:$('input[name="feedback"]:checked').value==="now",
+    clock:$('input[name="clock"]:checked').value==="on",
+    left:LIMITE, timer:null, finita:false
+  };
+  $("#view-briefing").classList.add("hide");
+  $("#view-result").classList.add("hide");
+  $("#view-exam").classList.remove("hide");
+  buildSheet();
+  drawQ(true);
+  if(S.clock){ tick(); S.timer=setInterval(tick,1000); }
+  else { $("#timer").textContent="senza limite"; $("#timer").className=""; }
+  window.scrollTo(0,0);
+}
+
+function tick(){
+  var t=$("#timer");
+  var m=Math.floor(S.left/60), s=S.left%60;
+  t.textContent=(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+  t.className=S.left<=120?"crit":(S.left<=600?"warn":"");
+  if(S.left<=0){ finish(true); return; }
+  S.left--;
+}
+
+function buildSheet(){
+  var g=$("#sheet-grid"); g.innerHTML="";
+  S.qs.forEach(function(q,k){
+    var b=el("button","q-cell",String(k+1));
+    b.type="button";
+    b.setAttribute("aria-label","Vai alla domanda "+(k+1));
+    b.addEventListener("click",function(){ S.i=k; drawQ(); });
+    g.appendChild(b);
+  });
+}
+
+function paintSheet(){
+  var cells=$("#sheet-grid").children;
+  for(var k=0;k<cells.length;k++){
+    var q=S.qs[k], c=cells[k], st="";
+    c.classList.toggle("here",k===S.i);
+    if(S.finita) st = q.dato===q.a ? "right" : "wrong";
+    else if(q.flag) st="flag";
+    else if(q.dato!==null) st="done";
+    if(st) c.setAttribute("data-state",st); else c.removeAttribute("data-state");
+  }
+}
+
+function drawQ(primaVolta){
+  var q=S.qs[S.i], host=$("#q-host");
+  host.innerHTML="";
+  var card=el("div","q-card q-fade");
+
+  card.appendChild(el("span","q-tag",etichetta(q)));
+  card.appendChild(el("p","q-text",q.q));
+
+  var locked = S.subito && q.dato!==null;
+  var wrap=el("div","q-answers");
+  q.o.forEach(function(txt,k){
+    var row=el("div","q-ans");
+    if(locked){
+      row.classList.add("locked");
+      if(k===q.a) row.classList.add("right");
+      else if(k===q.dato) row.classList.add("wrong");
+    }
+    var id="o"+S.i+"-"+k;
+    var inp=el("input");
+    inp.type="radio"; inp.name="opt"+S.i; inp.id=id; inp.value=k;
+    if(q.dato===k) inp.checked=true;
+    if(locked) inp.disabled=true;
+    var lab=el("label");
+    lab.setAttribute("for",id);
+    lab.appendChild(el("span","q-boxed",LET[k]));
+    lab.appendChild(el("span","q-txt",txt));
+    inp.addEventListener("change",function(){
+      q.dato=k;
+      if(S.subito) drawQ();
+      else { paintSheet(); paintRail(); }
+    });
+    row.appendChild(inp); row.appendChild(lab);
+    wrap.appendChild(row);
+  });
+  card.appendChild(wrap);
+
+  if(locked){
+    var v=el("p","q-verdict "+(q.dato===q.a?"ok":"ko"));
+    if(q.dato===q.a) v.textContent="Risposta corretta.";
+    else{
+      v.appendChild(document.createTextNode("Risposta errata: la corretta \u00e8 la "));
+      v.appendChild(el("strong",null,LET[q.a]+")"));
+    }
+    card.appendChild(v);
+  }
+
+  host.appendChild(card);
+  $("#q-pos").textContent=S.i+1;
+  paintRail();
+  $("#prev").disabled=S.i===0;
+  $("#next").textContent = S.i===S.qs.length-1 ? "Vai alla consegna" : "Avanti";
+  $("#flag").textContent = q.flag ? "Togli il segno" : "Segna da rivedere";
+  paintSheet();
+  if(!primaVolta && !locked) inCima();
+}
+
+/* riporta in vista l'inizio della prova quando si cambia domanda */
+function inCima(){
+  var t=$("#view-exam");
+  try{
+    if(t.scrollIntoView) t.scrollIntoView({block:"start",behavior:"auto"});
+    else window.scrollTo(0,t.offsetTop);
+  }catch(e){
+    try{ window.scrollTo(0,t.offsetTop||0); }catch(e2){}
+  }
+}
+
+function paintRail(){
+  var fatte=S.qs.filter(function(x){return x.dato!==null}).length;
+  $("#rail-fill").style.width=Math.round(fatte/S.qs.length*100)+"%";
+}
+
+function move(d){
+  var n=S.i+d;
+  if(n<0) return;
+  if(n>=S.qs.length){ askDeliver(); return; }
+  S.i=n; drawQ();
+}
+
+function askDeliver(){
+  var senza=S.qs.filter(function(q){return q.dato===null}).length;
+  var msg = senza
+    ? "Hai lasciato "+senza+(senza===1?" domanda senza risposta":" domande senza risposta")+". Consegnare comunque?"
+    : "Consegnare la prova?";
+  if(confirm(msg)) finish(false);
+}
+
+function finish(scaduto){
+  if(S.timer) clearInterval(S.timer);
+  S.finita=true;
+  var ok=0, mat={};
+  S.qs.forEach(function(q){
+    mat[q.sez]=mat[q.sez]||[0,0];
+    mat[q.sez][1]++;
+    if(q.dato===q.a){ ok++; mat[q.sez][0]++; }
+  });
+  var idoneo=ok>=SOGLIA;
+
+  $("#r-score").textContent=ok;
+  var st=$("#r-stamp");
+  st.textContent=idoneo?"idoneo":"non idoneo";
+  st.className="q-stamp "+(idoneo?"ok":"ko");
+
+  var errori=S.qs.length-ok, usato=LIMITE-S.left;
+  var det=$("#r-detail"); det.textContent="";
+  if(scaduto) det.appendChild(el("strong",null,"Tempo scaduto. "));
+  det.appendChild(document.createTextNode("Errori: "));
+  det.appendChild(el("strong",null,String(errori)));
+  det.appendChild(document.createTextNode(" su un massimo consentito di "));
+  det.appendChild(el("strong",null,String(S.qs.length-SOGLIA)));
+  det.appendChild(document.createTextNode("." + (S.clock ? " Tempo impiegato: "+Math.floor(usato/60)+" minuti." : "")));
+
+  var bars=$("#r-bars"); bars.innerHTML="";
+  SEZ.forEach(function(s){
+    var m=mat[s.slug];
+    if(m) bars.appendChild(barRow(s.titolo,m[0],m[1],m[0]/m[1]));
+  });
+
+  var pan=$("#r-errors-panel"), host=$("#r-errors");
+  host.innerHTML="";
+  var sbagliate=S.qs.filter(function(q){return q.dato!==q.a});
+  if(!sbagliate.length){
+    pan.textContent="";
+    var h=el("h3",null,"Nessun errore");
+    var pp=el("p","q-small q-muted","Prova perfetta: tutte le "+S.qs.length+" risposte sono corrette.");
+    pp.style.marginBottom="0";
+    pan.appendChild(h); pan.appendChild(pp);
+  }else{
+    sbagliate.forEach(function(q){
+      var d=el("div","q-rev");
+      d.appendChild(el("p","q-lbl",etichetta(q)));
+      d.appendChild(el("p","q-qq",q.q));
+      d.appendChild(riga("q-yours q-small",q.dato===null?null:LET[q.dato],
+                         q.dato===null?null:q.o[q.dato],"La tua risposta: ","Non hai risposto"));
+      d.appendChild(riga("q-good q-small",LET[q.a],q.o[q.a],"Corretta: ",null));
+      host.appendChild(d);
+    });
+  }
+
+  var db=load();
+  db.prove.push({t:Date.now(),ok:ok,tot:S.qs.length,mat:mat});
+  if(db.prove.length>60) db.prove=db.prove.slice(-60);
+  save();
+  renderLog();
+
+  $("#view-exam").classList.add("hide");
+  $("#view-result").classList.remove("hide");
+  window.scrollTo(0,0);
+}
+
+/* riga "La tua risposta: b) testo" senza ricorrere a innerHTML */
+function riga(cls,lettera,testo,prefisso,vuoto){
+  var p=el("p",cls);
+  if(lettera===null){ p.appendChild(el("strong",null,vuoto)); return p; }
+  p.appendChild(document.createTextNode(prefisso));
+  p.appendChild(el("strong",null,lettera+")"));
+  p.appendChild(document.createTextNode(" "+testo));
+  return p;
+}
+
+/* ---------- eventi ---------- */
+$("#start").addEventListener("click",startExam);
+$("#again").addEventListener("click",startExam);
+$("#back").addEventListener("click",function(){
+  $("#view-result").classList.add("hide");
+  $("#view-briefing").classList.remove("hide");
+  window.scrollTo(0,0);
+});
+$("#next").addEventListener("click",function(){move(1)});
+$("#prev").addEventListener("click",function(){move(-1)});
+$("#deliver").addEventListener("click",askDeliver);
+$("#flag").addEventListener("click",function(){
+  var q=S.qs[S.i]; q.flag=!q.flag;
+  $("#flag").textContent=q.flag?"Togli il segno":"Segna da rivedere";
+  paintSheet();
+});
+$("#clear-log").addEventListener("click",function(){
+  if(!confirm("Cancellare lo storico delle prove su questo dispositivo?")) return;
+  mem={prove:[]}; save(); renderLog();
+});
+document.addEventListener("keydown",function(e){
+  if($("#view-exam").classList.contains("hide")) return;
+  if(e.target.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") move(1);
+  else if(e.key==="ArrowLeft") move(-1);
+  else if("1234".indexOf(e.key)>-1){
+    var k=+e.key-1, q=S.qs[S.i];
+    if(k<q.o.length && !(S.subito&&q.dato!==null)){ q.dato=k; drawQ(); }
+  }
+});
+window.addEventListener("beforeunload",function(e){
+  if(S&&!S.finita){ e.preventDefault(); e.returnValue=""; }
+});
+
+renderLog();
+})();
+</script>
+</body>
+</html>

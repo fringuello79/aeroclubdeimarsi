@@ -3,22 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galleria - Aeroclub dei Marsi</title>
+    <title>Galleria · Aeroclub dei Marsi</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Aeroclub dei Marsi">
+    <meta property="og:title" content="Galleria · Aeroclub dei Marsi">
+    <meta property="og:description" content="Voli, eventi, velivoli e vita di clubhouse all'aviosuperficie di Celano.">
+    <meta property="og:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta property="og:locale" content="it_IT">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Galleria · Aeroclub dei Marsi">
+    <meta name="twitter:description" content="Voli, eventi, velivoli e vita di clubhouse all'aviosuperficie di Celano.">
+    <meta name="twitter:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
+    <meta name="description" content="Galleria fotografica dell'Aeroclub dei Marsi: voli, eventi, velivoli e vita di clubhouse all'aviosuperficie di Celano.">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
         <div class="header-content">
             <div class="header-title-wrapper">
-                <img src="logo.jpg" alt="Logo Aeroclub dei Marsi" id="header-logo">
+                <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi" id="header-logo">
                 <h1>Aeroclub dei Marsi</h1>
             </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Apri menu" aria-expanded="false">&#9776;</button>
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="chi-siamo.html">Chi Siamo</a></li>
                     <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
                     <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html">Quiz VDS</a></li>
                     <li><a href="eventi.html">Eventi</a></li>
                     <li><a href="area-soci.html">Area Soci</a></li>
                     <li><a href="velivoli.html">Velivoli</a></li>
@@ -29,87 +46,90 @@
         </div>
     </header>
 
+    <section class="hero">
+        <img src="galleria-1.jpg" alt="In volo con l'Aeroclub dei Marsi" class="hero-image">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-eyebrow">Momenti</span>
+            <h2>Il nostro cielo,<br>i nostri volti.</h2>
+            <p class="hero-subtitle">Voli, eventi, velivoli e tanti pranzi in clubhouse. Un po' di quello che siamo, in fotografia.</p>
+        </div>
+    </section>
+
     <div class="container">
         <main>
-<h2>Galleria Fotografica</h2>
-            
-            <p>Scopri le immagini delle nostre attività, dei nostri velivoli e degli eventi organizzati dall'Aeroclub dei Marsi.</p>
+            <h2>Galleria Fotografica</h2>
+            <p class="gallery-intro">Clicca su una foto per ingrandirla. Premi <strong>Esc</strong> o clicca fuori per chiudere.</p>
 
-            <h3>I Nostri Velivoli</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Tecnam P96 I-6195</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Tecnam P2002 Sierra I-8297</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Velivoli in volo</p>
-                </div>
-            </div>
-
-            <h3>Aviosuperficie LIAH</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Vista aerea aviosuperficie</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Pista LIAH</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Clubhouse</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Hangar</p>
-                </div>
-            </div>
-
-            <h3>Attività e Eventi</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Giornata porte aperte</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Fly-in sociale</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Corso di volo</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Briefing pre-volo</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Primo volo solista</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Consegna brevetti</p>
-                </div>
-            </div>
-
-            <h3>Paesaggi</h3>
-            <div class="gallery">
-                <div class="gallery-item">
-                    <p>Vista sui Marsi</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Abruzzo dall'alto</p>
-                </div>
-                <div class="gallery-item">
-                    <p>Tramonto in volo</p>
-                </div>
+            <div class="gallery-strip">
+                <img src="galleria-1.jpg" alt="In volo sulla Marsica">
+                <img src="galleria-2.jpg" alt="All'aviosuperficie di Celano">
+                <img src="galleria-3.jpg" alt="A bordo con l'istruttore">
+                <img src="galleria-4.jpg" alt="Donne in Volo">
+                <img src="galleria-5.jpg" alt="Soci e amici dell'Aeroclub">
+                <img src="galleria-6.jpg" alt="Una giornata di volo">
+                <img src="galleria-7.jpg" alt="Seminario all'Aeroclub">
+                <img src="galleria-8.jpg" alt="Momenti di volo">
+                <img src="hero-home.jpg" alt="La pista al tramonto">
+                <img src="hero-area-soci.jpg" alt="Pranzo in clubhouse">
+                <img src="velivolo-p2002.jpg" alt="Il Tecnam P2002 Sierra Avanzato">
+                <img src="velivolo-p96.jpg" alt="Il Tecnam P96 Golf">
             </div>
 
             <div class="info-box">
-                <p><strong>Nota:</strong> Questa galleria è in fase di allestimento. Le immagini saranno caricate prossimamente. Se hai foto delle attività dell'Aeroclub che vorresti condividere, contattaci!</p>
+                <p><strong>Hai una bella foto dell'Aeroclub?</strong> Condividila con noi taggando <a href="https://www.instagram.com/aeroclubdeimarsi/" target="_blank" rel="noopener noreferrer">@aeroclubdeimarsi</a> sui social, oppure inviacela via email. Le più belle finiranno qui in galleria!</p>
                 <a href="contatti.html" class="btn">Contattaci</a>
             </div>
-
-            <p style="margin-top: 2rem;">Per restare aggiornato sulle nostre attività e vedere altre foto, seguici sui social media. Maggiori informazioni nella sezione <a href="contatti.html">Contatti</a>.</p>
         </main>
     </div>
 
     <footer>
-        <p>&copy; 2026 Aeroclub dei Marsi. Tutti i diritti riservati.</p>
+        <div class="footer-main">
+            <div class="footer-col">
+                <div class="footer-brand">
+                    <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi">
+                    <span>Aeroclub dei Marsi</span>
+                </div>
+                <p>Scuola di Volo VDS e comunità di piloti presso l'aviosuperficie LIAH di Celano (AQ), nel cuore della Marsica.</p>
+                <div class="footer-social">
+                    <a href="https://www.instagram.com/aeroclubdeimarsi/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.12 1.38C1.35 2.67.94 3.34.63 4.13.33 4.9.13 5.77.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.28.26 2.15.56 2.91.31.79.72 1.46 1.38 2.12.66.66 1.33 1.07 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.28-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.12-1.38.66-.66 1.07-1.33 1.38-2.12.3-.76.5-1.63.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.28-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.12C21.33 1.35 20.66.94 19.87.63 19.1.33 18.23.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/></svg>
+                    </a>
+                    <a href="https://www.facebook.com/people/aeroclubdeimarsi/100091784172240/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h5>Naviga</h5>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                    <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html">Quiz VDS</a></li>
+                    <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
+                    <li><a href="eventi.html">Eventi</a></li>
+                    <li><a href="velivoli.html">Velivoli</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h5>Contatti</h5>
+                <ul>
+                    <li><a href="tel:+393485112415">📞 +39 348 5112415</a></li>
+                    <li><a href="mailto:infoaeroclubdeimarsi@gmail.com">✉️ infoaeroclubdeimarsi@gmail.com</a></li>
+                    <li>📍 Via della Stanga, Celano (AQ)</li>
+                    <li><a href="area-soci.html">Area Soci</a></li>
+                    <li><a href="galleria.html">Galleria</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Aeroclub dei Marsi · Aviosuperficie LIAH · Celano (AQ)</p>
+            <p class="footer-credit">Sito realizzato da <a href="mailto:997creations@gmail.com">997Creations</a></p>
+        </div>
     </footer>
+
+    <script src="mobile-menu.js"></script>
+    <script src="interactions.js"></script>
 </body>
 </html>

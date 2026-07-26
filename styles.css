@@ -150,14 +150,16 @@ nav ul {
     flex-wrap: nowrap;
     gap: 0;
     justify-content: flex-start;
-    align-items: center;
+    align-items: flex-end;
     height: 56px;
+    padding-bottom: 3px;
 }
 
 /* Separatori eleganti tra le voci */
 nav ul li {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    padding-bottom: 0;
 }
 
 nav ul li + li::before {
@@ -167,54 +169,69 @@ nav ul li + li::before {
     height: 14px;
     background: rgba(255, 255, 255, 0.18);
     flex-shrink: 0;
+    margin-bottom: 14px;
 }
 
 nav a {
     color: rgba(255, 255, 255, 0.78);
     text-decoration: none;
     padding: 0 0.75rem;
-    height: 56px;
+    height: 50px;
     display: flex;
     align-items: center;
-    transition: all 0.22s var(--ease);
     font-weight: 500;
     font-size: 0.83rem;
     letter-spacing: 0.02em;
     position: relative;
     white-space: nowrap;
+    /* Transizione su colore e sfondo separati per controllo fine */
+    transition: color 0.22s var(--ease), background 0.3s var(--ease);
 }
 
+/* Sottolineatura: presente solo sull'active, mai sull'hover */
 nav a::after {
     content: "";
     position: absolute;
     bottom: 0;
     left: 0.75rem;
     right: 0.75rem;
-    width: auto;
-    height: 2px;
+    height: 2.5px;
     background: var(--gold);
-    transition: opacity 0.22s var(--ease);
     border-radius: 2px 2px 0 0;
+    opacity: 0;
+    /* Animazione pulse sull'active */
+    animation: none;
+}
+
+/* Hover: riflesso luminoso, nessuna linea */
+nav a:hover {
+    color: white;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.11) 0%,
+        rgba(255, 255, 255, 0.04) 100%
+    );
+}
+
+/* Nessuna linea sull'hover */
+nav a:hover::after {
     opacity: 0;
 }
 
-nav a:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.06);
-}
-
-nav a:hover::after {
-    opacity: 0.6;
-}
-
+/* Active: sottolineatura dorata animata */
 nav a.active {
     color: var(--gold);
-    background: rgba(201, 169, 96, 0.1);
+    background: rgba(201, 169, 96, 0.08);
 }
 
 nav a.active::after {
     opacity: 1;
-    background: var(--gold);
+    animation: goldPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes goldPulse {
+    0%, 100% { opacity: 1;   box-shadow: 0 0 4px rgba(201, 169, 96, 0.5); }
+    50%       { opacity: 0.7; box-shadow: 0 0 10px rgba(201, 169, 96, 0.9); }
 }
 
 /* ============================================================

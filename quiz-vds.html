@@ -680,7 +680,10 @@ function build(){
       qs.push({sez:s.slug,mat:s.titolo,parte:s.parte,n:d.n,q:d.q,o:d.o,a:d.a,dato:null,flag:false});
     }
   });
-  return qs;
+  /* Mescolo l'intero questionario: le materie NON escono più raggruppate
+     (niente 10 aerodinamica di fila, poi 10 meteo, ecc.), ma sparse a caso.
+     Le quote per materia restano rispettate. */
+  return shuffle(qs);
 }
 
 /* ---------- stato della prova ---------- */

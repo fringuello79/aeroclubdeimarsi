@@ -150,41 +150,40 @@ nav ul {
     flex-wrap: nowrap;
     gap: 0;
     justify-content: flex-start;
-    align-items: flex-end;
+    align-items: stretch;
     height: 56px;
-    padding-bottom: 3px;
 }
 
 /* Separatori eleganti tra le voci */
 nav ul li {
     display: flex;
-    align-items: flex-end;
-    padding-bottom: 0;
+    align-items: stretch;
 }
 
 nav ul li + li::before {
     content: "";
-    display: inline-block;
+    align-self: center;
     width: 1px;
     height: 14px;
     background: rgba(255, 255, 255, 0.18);
     flex-shrink: 0;
-    margin-bottom: 14px;
 }
 
 nav a {
     color: rgba(255, 255, 255, 0.78);
     text-decoration: none;
     padding: 0 0.75rem;
-    height: 50px;
+    height: 56px;
     display: flex;
     align-items: center;
+    /* spinge il testo qualche px più in basso per allinearlo otticamente
+       alla baseline del titolo "Aeroclub dei Marsi" */
+    padding-top: 3px;
     font-weight: 500;
     font-size: 0.83rem;
     letter-spacing: 0.02em;
     position: relative;
     white-space: nowrap;
-    /* Transizione su colore e sfondo separati per controllo fine */
     transition: color 0.22s var(--ease), background 0.3s var(--ease);
 }
 

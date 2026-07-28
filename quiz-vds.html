@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz VDS · Simulazione esame · Aeroclub dei Marsi</title>
+    <title>Quiz VDS e fonia · Simulazione esame · Aeroclub dei Marsi</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Aeroclub dei Marsi">
-    <meta property="og:title" content="Quiz VDS · Simulazione esame · Aeroclub dei Marsi">
-    <meta property="og:description" content="Simula l'esame teorico VDS: 70 domande estratte dai questionari ufficiali dell'Aero Club d'Italia.">
+    <meta property="og:title" content="Quiz VDS e fonia · Simulazione esame · Aeroclub dei Marsi">
+    <meta property="og:description" content="Simula l'esame teorico VDS e le prove di radiotelefonia in italiano e in inglese.">
     <meta property="og:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
     <meta property="og:locale" content="it_IT">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Quiz VDS · Simulazione esame · Aeroclub dei Marsi">
-    <meta name="twitter:description" content="Simula l'esame teorico VDS: 70 domande estratte dai questionari ufficiali dell'Aero Club d'Italia.">
+    <meta name="twitter:title" content="Quiz VDS e fonia · Simulazione esame · Aeroclub dei Marsi">
+    <meta name="twitter:description" content="Simula l'esame teorico VDS e le prove di radiotelefonia in italiano e in inglese.">
     <meta name="twitter:image" content="https://www.aeroclubdeimarsi.it/og-image.jpg">
-    <meta name="description" content="Simulazione dell'esame teorico per l'attestato VDS: 70 domande estratte a caso dai questionari ufficiali AeCI, con punteggio, correzione e statistiche per materia.">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <meta name="description" content="Simulazione dell'esame teorico per l'attestato VDS con i quesiti ufficiali AeCI, e prove di radiotelefonia aeronautica in italiano e in inglese, con punteggio e statistiche per materia.">
+    <link rel="stylesheet" href="styles.css">
 <style>
 /* ============================================================
    QUIZ VDS - stili specifici, confinati dentro .quiz
@@ -318,6 +318,25 @@
 .quiz .q-rev .q-yours { color: var(--q-ko); }
 .quiz .q-rev .q-good { color: var(--q-ok); }
 
+/* fonte normativa mostrata sotto la risposta corretta */
+.quiz .q-rif {
+    font-size: 0.8rem;
+    color: #5c6b7a;
+    border-left: 3px solid var(--gold);
+    padding-left: 0.6rem;
+    margin: 0.5rem 0 0;
+    line-height: 1.45;
+}
+/* avviso sulle prove non ufficiali */
+.quiz .q-warnbox {
+    background: linear-gradient(135deg, #fefaf5 0%, #fff8e7 100%);
+    border-left: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    color: var(--slate);
+    line-height: 1.55;
+}
+
 .quiz .q-fade { animation: qIn 0.35s var(--ease-out); }
 @keyframes qIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
@@ -343,26 +362,25 @@
 <body>
     <header>
         <div class="header-content">
-            <a href="index.html" class="header-title-wrapper">
+            <div class="header-title-wrapper">
                 <img src="logo-circle.png" alt="Logo Aeroclub dei Marsi" id="header-logo">
                 <h1>Aeroclub dei Marsi</h1>
-            </a>
-            <div class="header-divider"></div>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Apri menu" aria-expanded="false">&#9776;</button>
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="chi-siamo.html">Chi Siamo</a></li>
-                    <li><a href="aviosuperficie.html">Aviosuperficie</a></li>
+                    <li><a href="aviosuperficie.html">Aviosuperficie LIAH</a></li>
                     <li><a href="scuola-volo.html">Scuola di Volo</a></li>
+                    <li><a href="quiz-vds.html" class="active">Quiz VDS</a></li>
                     <li><a href="eventi.html">Eventi</a></li>
                     <li><a href="area-soci.html">Area Soci</a></li>
-                    <li><a href="quiz-vds.html" class="active">Quiz VDS</a></li>
                     <li><a href="velivoli.html">Velivoli</a></li>
                     <li><a href="contatti.html">Contatti</a></li>
                     <li><a href="galleria.html">Galleria</a></li>
                 </ul>
             </nav>
-            <button class="menu-toggle" id="menu-toggle" aria-label="Apri menu" aria-expanded="false">&#9776;</button>
         </div>
     </header>
 
@@ -370,34 +388,36 @@
         <img src="hero-scuola-volo.jpg" alt="Pianificazione di un volo VFR su carta aeronautica" class="hero-image">
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <span class="hero-eyebrow">Preparazione all'esame · VDS</span>
+            <span class="hero-eyebrow">Preparazione all'esame · VDS e fonia</span>
             <h2>Pronto per l'esame?<br>Scoprilo adesso.</h2>
-            <p class="hero-subtitle">Settanta domande estratte a caso dai questionari ufficiali dell'Aero Club d'Italia, con lo stesso tempo e la stessa soglia dell'esame vero.</p>
+            <p class="hero-subtitle">Tre simulazioni d'esame: attestato VDS con i quesiti ufficiali dell'Aero Club d'Italia, radiotelefonia in italiano e in inglese.</p>
         </div>
     </section>
 
     <div class="container">
         <main class="quiz">
-            <h2>Quiz VDS</h2>
+            <h2>Quiz VDS e fonia</h2>
 
-            <p>Questa è una simulazione della prova teorica per l'attestato di volo da diporto o sportivo.
-            Le domande vengono estratte a caso da un archivio di <strong id="db-count">858</strong> quesiti
-            tratti dai questionari ufficiali AeCI, distribuiti sulle nove materie d'esame.
-            Puoi ripeterla quante volte vuoi: ogni prova è diversa.</p>
+            <p>Simulazioni d'esame per chi si prepara all'attestato VDS e alla radiotelefonia
+            aeronautica. Le domande vengono estratte a caso da un archivio di
+            <strong id="db-count">1171</strong> quesiti: ogni prova è diversa e puoi ripeterla
+            quante volte vuoi.</p>
 
             <!-- ============ PRIMA DI INIZIARE ============ -->
             <section id="view-briefing">
+                <fieldset>
+                    <legend>Quale prova vuoi svolgere</legend>
+                    <div class="q-opts" id="scelta-prova"></div>
+                </fieldset>
+
                 <div class="q-card">
-                    <h3>Composizione della prova</h3>
+                    <h3 id="tit-prova">Composizione della prova</h3>
                     <table id="tab-materie">
-                        <thead><tr><th>Materia</th><th>Domande</th></tr></thead>
+                        <thead><tr><th id="th-materia">Materia</th><th>Domande</th></tr></thead>
                         <tbody></tbody>
                     </table>
-                    <p class="q-small q-muted" style="margin-top:1.1rem">
-                        Tempo massimo <strong class="q-mono">120 minuti</strong>. Sono ammessi errori fino al 10%:
-                        per risultare idoneo occorre rispondere correttamente ad almeno
-                        <strong class="q-mono">63</strong> domande su <strong class="q-mono">70</strong>.
-                    </p>
+                    <p class="q-small q-muted" style="margin-top:1.1rem" id="par-prova"></p>
+                    <p class="q-small" id="nota-prova" style="margin-top:0.8rem"></p>
                 </div>
 
                 <fieldset>
@@ -431,7 +451,7 @@
                 <button class="btn btn-gold" id="start" style="width:100%">Inizia la prova</button>
 
                 <div class="q-card hide" id="panel-log" style="margin-top:1.8rem">
-                    <h3>Le tue prove</h3>
+                    <h3 id="tit-log">Le tue prove</h3>
                     <table id="tab-log">
                         <thead><tr><th>Data</th><th>Punteggio</th><th>Esito</th></tr></thead>
                         <tbody></tbody>
@@ -476,7 +496,7 @@
             <section id="view-result" class="hide">
                 <div class="q-card">
                     <h3>Esito della prova</h3>
-                    <div class="q-score"><span class="q-big" id="r-score">0</span><span class="q-of">risposte corrette su 70</span></div>
+                    <div class="q-score"><span class="q-big" id="r-score">0</span><span class="q-of">risposte corrette</span></div>
                     <div><span class="q-stamp" id="r-stamp">&mdash;</span></div>
                     <p class="q-small q-muted" id="r-detail" style="margin-top:1.1rem"></p>
                 </div>
@@ -500,12 +520,15 @@
             <div class="info-box">
                 <p><strong>Come funziona l'esame vero.</strong> La prova teorica per l'attestato VDS consiste in
                 70 domande a risposta multipla da svolgere in 120 minuti: si è idonei con un massimo del 10% di errori.
-                Il programma completo dei corsi è nella pagina <a href="scuola-volo.html">Scuola di Volo</a>.</p>
+                Il certificato di radiotelefonia si consegue in lingua italiana o, su richiesta, in lingua inglese,
+                dopo un corso presso una scuola certificata AeCI. Il programma completo dei corsi è nella pagina
+                <a href="scuola-volo.html">Scuola di Volo</a>.</p>
             </div>
 
             <p class="q-small q-muted">
-            Le domande provengono dai questionari ufficiali AeCI per l'attestato VDS, classe multiassi.
-            Non sono ancora incluse quelle che richiedono la lettura di una figura.
+            Le domande della prova per l'attestato provengono dai questionari ufficiali AeCI, classe multiassi;
+            non sono ancora incluse quelle che richiedono la lettura di una figura. Le prove di fonia sono
+            esercitazioni originali costruite sulle fonti normative e non riproducono i quesiti d'esame AeCI.
             Questo strumento serve per esercitarsi e non sostituisce il corso teorico né l'esame.
             </p>
         </main>
@@ -589,29 +612,74 @@ var LET=["a","b","c","d"];
 function $(s){return document.querySelector(s)}
 function el(t,c,x){var n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
-function etichetta(q){return "Parte "+q.parte+" \u00b7 "+q.mat}
+function etichetta(q){return (P.id==="vds"?"Parte "+q.parte+" \u00b7 ":"")+q.mat}
 
-var SEZ=QUIZ_DB.sezioni;
-var TOT=SEZ.reduce(function(s,x){return s+x.quota},0);
-var SOGLIA=Math.ceil(TOT*0.9);
-var LIMITE=120*60;
+var PROVE=QUIZ_DB.prove;
+var P=PROVE[0];          /* prova selezionata */
+var SEZ, TOT, SOGLIA, LIMITE;
 
-/* ---------- schermata iniziale ---------- */
-(function briefing(){
-  var tb=$("#tab-materie tbody");
+function usaProva(p){
+  P=p;
+  SEZ=P.sezioni;
+  TOT=SEZ.reduce(function(s,x){return s+x.quota},0);
+  SOGLIA=Math.ceil(TOT*P.sogliaPct/100);
+  LIMITE=P.minuti*60;
+
+  $("#tit-prova").textContent="Composizione della prova \u00b7 "+P.nome;
+  $("#th-materia").textContent=P.id==="vds"?"Materia":"Argomento";
+
+  var tb=$("#tab-materie tbody"); tb.innerHTML="";
   SEZ.forEach(function(s){
     var tr=el("tr");
     tr.appendChild(el("td",null,s.titolo));
     tr.appendChild(el("td","q-num",String(s.quota)));
     tb.appendChild(tr);
   });
+
+  var par=$("#par-prova"); par.textContent="";
+  par.appendChild(document.createTextNode("Tempo massimo "));
+  par.appendChild(el("strong","q-mono",P.minuti+" minuti"));
+  par.appendChild(document.createTextNode(". Per risultare idoneo occorre rispondere correttamente ad almeno "));
+  par.appendChild(el("strong","q-mono",String(SOGLIA)));
+  par.appendChild(document.createTextNode(" domande su "));
+  par.appendChild(el("strong","q-mono",String(TOT)));
+  par.appendChild(document.createTextNode(", pari al "+P.sogliaPct+"%."));
+
+  var nota=$("#nota-prova");
+  nota.textContent=P.nota;
+  nota.className="q-small "+(P.ufficiale?"q-muted":"q-warnbox");
+
   $("#q-tot").textContent=TOT;
   $(".q-of").textContent="risposte corrette su "+TOT;
-  $("#db-count").textContent=SEZ.reduce(function(n,s){return n+s.domande.length},0);
+  renderLog();
+}
+
+/* ---------- schermata iniziale ---------- */
+(function briefing(){
+  var host=$("#scelta-prova");
+  PROVE.forEach(function(p,i){
+    var lab=el("label","q-opt");
+    var inp=el("input");
+    inp.type="radio"; inp.name="prova"; inp.value=p.id;
+    if(i===0) inp.checked=true;
+    var sp=el("span",null,p.nome);
+    var sm=el("small",null,p.sottotitolo+" \u00b7 "+p.n+" domande in "+p.minuti+" minuti");
+    sp.appendChild(sm);
+    inp.addEventListener("change",function(){ usaProva(p); });
+    lab.appendChild(inp); lab.appendChild(sp);
+    host.appendChild(lab);
+  });
+  var tot=0;
+  PROVE.forEach(function(p){
+    p.sezioni.forEach(function(s){ tot+=s.domande.length; });
+  });
+  $("#db-count").textContent=tot;
+  usaProva(PROVE[0]);
 })();
 
 function renderLog(){
-  var d=load(), p=d.prove;
+  var d=load(), p=(d.prove||[]).filter(function(r){ return (r.p||"vds")===P.id; });
+  $("#tit-log").textContent="Le tue prove \u00b7 "+P.nome;
   if(!p.length){ $("#panel-log").classList.add("hide"); $("#panel-weak").classList.add("hide"); return; }
   $("#panel-log").classList.remove("hide");
   var tb=$("#tab-log tbody"); tb.innerHTML="";
@@ -621,7 +689,7 @@ function renderLog(){
       dt.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+
       dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})));
     tr.appendChild(el("td","q-num",r.ok+"/"+r.tot));
-    var passa=r.ok>=Math.ceil(r.tot*0.9);
+    var passa=r.ok>=Math.ceil(r.tot*(r.s||90)/100);
     var td=el("td","q-num",passa?"idoneo":"non idoneo");
     td.style.color=passa?"#16a34a":"#7a1f2b";
     td.style.fontWeight="600";
@@ -677,19 +745,21 @@ function build(){
       var d=pool[i], k=keyOf(d.q);
       if(visti[k]) continue;
       visti[k]=1; preso++;
-      qs.push({sez:s.slug,mat:s.titolo,parte:s.parte,n:d.n,q:d.q,o:d.o,a:d.a,dato:null,flag:false});
+      qs.push({sez:s.slug,mat:s.titolo,parte:s.parte,n:d.n,q:d.q,o:d.o,a:d.a,
+               rif:d.rif||null,dato:null,flag:false});
     }
   });
-  /* Mescolo l'intero questionario: le materie NON escono più raggruppate
-     (niente 10 aerodinamica di fila, poi 10 meteo, ecc.), ma sparse a caso.
-     Le quote per materia restano rispettate. */
-  return shuffle(qs);
+  return qs;
 }
 
 /* ---------- stato della prova ---------- */
 var S=null;
 
 function startExam(){
+  var sel=document.querySelector('input[name="prova"]:checked');
+  if(sel){
+    for(var i=0;i<PROVE.length;i++) if(PROVE[i].id===sel.value && PROVE[i]!==P) usaProva(PROVE[i]);
+  }
   S={
     qs:build(), i:0,
     subito:$('input[name="feedback"]:checked').value==="now",
@@ -782,6 +852,7 @@ function drawQ(primaVolta){
       v.appendChild(el("strong",null,LET[q.a]+")"));
     }
     card.appendChild(v);
+    if(q.rif) card.appendChild(el("p","q-rif","Fonte: "+q.rif));
   }
 
   host.appendChild(card);
@@ -873,12 +944,13 @@ function finish(scaduto){
       d.appendChild(riga("q-yours q-small",q.dato===null?null:LET[q.dato],
                          q.dato===null?null:q.o[q.dato],"La tua risposta: ","Non hai risposto"));
       d.appendChild(riga("q-good q-small",LET[q.a],q.o[q.a],"Corretta: ",null));
+      if(q.rif) d.appendChild(el("p","q-rif","Fonte: "+q.rif));
       host.appendChild(d);
     });
   }
 
   var db=load();
-  db.prove.push({t:Date.now(),ok:ok,tot:S.qs.length,mat:mat});
+  db.prove.push({t:Date.now(),ok:ok,tot:S.qs.length,mat:mat,p:P.id,s:P.sogliaPct});
   if(db.prove.length>60) db.prove=db.prove.slice(-60);
   save();
   renderLog();

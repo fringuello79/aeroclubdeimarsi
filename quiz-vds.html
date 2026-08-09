@@ -318,6 +318,23 @@
 .quiz .q-rev .q-yours { color: var(--q-ko); }
 .quiz .q-rev .q-good { color: var(--q-ok); }
 
+/* riga con etichetta dell'argomento ed eventuale contrassegno */
+.quiz .q-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.quiz .q-meta .q-tag { margin-bottom: 0; }
+.quiz .q-badge {
+    display: inline-block;
+    background: #fff8e7;
+    color: var(--gold-warm);
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    padding: 0.18rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-left: 0.4rem;
+    white-space: nowrap;
+}
+.quiz .q-lbl .q-badge { margin-left: 0.5rem; }
+
 /* fonte normativa mostrata sotto la risposta corretta */
 .quiz .q-rif {
     font-size: 0.8rem;
@@ -390,7 +407,7 @@
         <div class="hero-content">
             <span class="hero-eyebrow">Preparazione all'esame · VDS e fonia</span>
             <h2>Pronto per l'esame?<br>Scoprilo adesso.</h2>
-            <p class="hero-subtitle">Tre simulazioni d'esame: attestato VDS con i quesiti ufficiali dell'Aero Club d'Italia, radiotelefonia in italiano e in inglese.</p>
+            <p class="hero-subtitle">Tre simulazioni d'esame con i quesiti ufficiali: attestato VDS, radiotelefonia in italiano e in inglese.</p>
         </div>
     </section>
 
@@ -398,10 +415,10 @@
         <main class="quiz">
             <h2>Quiz VDS e fonia</h2>
 
-            <p>Simulazioni d'esame per chi si prepara all'attestato VDS e alla radiotelefonia
-            aeronautica. Le domande vengono estratte a caso da un archivio di
-            <strong id="db-count">1171</strong> quesiti: ogni prova è diversa e puoi ripeterla
-            quante volte vuoi.</p>
+            <p>Simulazioni d'esame per chi si prepara all'attestato VDS e al certificato di
+            radiotelefonia aeronautica. Le domande vengono estratte a caso da un archivio di
+            <strong id="db-count">1227</strong> quesiti ufficiali: ogni prova è diversa e puoi
+            ripeterla quante volte vuoi.</p>
 
             <!-- ============ PRIMA DI INIZIARE ============ -->
             <section id="view-briefing">
@@ -526,9 +543,10 @@
             </div>
 
             <p class="q-small q-muted">
-            Le domande della prova per l'attestato provengono dai questionari ufficiali AeCI, classe multiassi;
-            non sono ancora incluse quelle che richiedono la lettura di una figura. Le prove di fonia sono
-            esercitazioni originali costruite sulle fonti normative e non riproducono i quesiti d'esame AeCI.
+            Le domande provengono dai questionari ufficiali: quelli AeCI per l'attestato VDS, classe multiassi,
+            e il questionario di fonia aeronautica per le due prove di radiotelefonia. Non sono incluse le domande
+            che richiedono la lettura di una figura. Poche domande di fonia, contrassegnate come integrative,
+            sono state aggiunte da noi dove l'archivio ufficiale era troppo sottile.
             Questo strumento serve per esercitarsi e non sostituisce il corso teorico né l'esame.
             </p>
         </main>
@@ -746,7 +764,7 @@ function build(){
       if(visti[k]) continue;
       visti[k]=1; preso++;
       qs.push({sez:s.slug,mat:s.titolo,parte:s.parte,n:d.n,q:d.q,o:d.o,a:d.a,
-               rif:d.rif||null,dato:null,flag:false});
+               rif:d.rif||null,uff:d.u!==0,dato:null,flag:false});
     }
   });
   return qs;
@@ -813,7 +831,14 @@ function drawQ(primaVolta){
   host.innerHTML="";
   var card=el("div","q-card q-fade");
 
-  card.appendChild(el("span","q-tag",etichetta(q)));
+  var meta=el("div","q-meta");
+  meta.appendChild(el("span","q-tag",etichetta(q)));
+  if(!q.uff){
+    var b=el("span","q-badge","integrativa");
+    b.title="Domanda non presente nel questionario ufficiale: e' una nostra integrazione, con fonte indicata.";
+    meta.appendChild(b);
+  }
+  card.appendChild(meta);
   card.appendChild(el("p","q-text",q.q));
 
   var locked = S.subito && q.dato!==null;
@@ -939,7 +964,9 @@ function finish(scaduto){
   }else{
     sbagliate.forEach(function(q){
       var d=el("div","q-rev");
-      d.appendChild(el("p","q-lbl",etichetta(q)));
+      var lbl=el("p","q-lbl",etichetta(q));
+      if(!q.uff) lbl.appendChild(el("span","q-badge","integrativa"));
+      d.appendChild(lbl);
       d.appendChild(el("p","q-qq",q.q));
       d.appendChild(riga("q-yours q-small",q.dato===null?null:LET[q.dato],
                          q.dato===null?null:q.o[q.dato],"La tua risposta: ","Non hai risposto"));
